@@ -20,7 +20,8 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "src/app/checkout-success/checkout-success"
   ],
   "exclude": ["node_modules"]
 }
