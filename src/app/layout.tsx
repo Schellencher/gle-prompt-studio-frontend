@@ -19,7 +19,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 8,
+            right: 8,
+            zIndex: 99999,
+            fontSize: 12,
+            background: "rgba(0,0,0,.6)",
+            padding: "4px 8px",
+            borderRadius: 8,
+          }}
+        >
+          DEPLOY_MARKER_240126_2141
+        </div>
+
+        {children}
+      </body>
     </html>
   );
 }
