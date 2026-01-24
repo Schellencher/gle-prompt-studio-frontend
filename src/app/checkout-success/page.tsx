@@ -1,70 +1,69 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  "https://gle-prompt-studio-backend-1.onrender.com";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:3002";
 
 export default function CheckoutSuccessPage() {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const [status, setStatus] = useState("Aktiviere PRO…");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "syncing" | "done" | "error">(
+    "idle"
+  );
+  const [msg, setMsg] = useState<string>("");
 
+  // 1) session_id aus URL holen (nur im Browser)
   useEffect(() => {
-    const sessionId = sp.get("session_id");
-    if (!sessionId) {
-      setStatus("Fehler: session_id fehlt in der URL.");
-      return;
-    }
+    const sp = new URLSearchParams(window.location.search);
+    setSessionId(sp.get("session_id"));
+  }, []);
+
+  // 2) Sync call (nur wenn session_id da ist)
+  useEffect(() => {
+    if (!sessionId) return;
 
     (async () => {
       try {
-        setStatus("Sync läuft…");
+        setStatus("syncing");
+        setMsg("Aktiviere PRO…");
 
-        const r = await fetch(`${API_BASE_URL}/api/sync-checkout-session`, {
+        const res = await fetch(`${API_BASE_URL}/api/sync-checkout-session`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId }),
+          body: JSON.stringify({ sessionId }),
         });
 
-        const data = await r.json();
+        const data = await res.json().catch(() => ({}));
 
-        if (!r.ok) {
-          setStatus(`Fehler: ${data?.error || "sync_failed"}`);
-          return;
+        if (!res.ok) {
+          throw new Error(data?.error || `sync_failed_${res.status}`);
         }
 
-        const userId = data?.user_id || data?.userId;
-        const accountId = data?.accountId;
-
-        if (!userId || !accountId) {
-          setStatus("Fehler: Sync ok, aber IDs fehlen (user_id/accountId).");
-          return;
-        }
-
-        localStorage.setItem("gle_user_id_v1", String(userId));
-        localStorage.setItem("gle_account_id_v1", String(accountId));
-
-        setStatus("PRO aktiv ✅ Weiterleitung…");
-        router.replace("/?paid=1");
-      } catch {
-        setStatus("Fehler: Netzwerkproblem (Backend nicht erreichbar).");
+        setStatus("done");
+        setMsg("✅ PRO aktiviert! Du kannst zurück zur App.");
+      } catch (e: any) {
+        setStatus("error");
+        setMsg(`❌ Sync fehlgeschlagen: ${e?.message || "unknown_error"}`);
       }
     })();
-  }, [sp, router]);
+  }, [sessionId]);
 
   return (
-    <div style={{ padding: 24, maxWidth: 720, margin: "0 auto" }}>
-      <h1>Danke! 🎉</h1>
-      <p>{status}</p>
+    <main style={{ padding: 24 }}>
+      <h1>Checkout erfolgreich</h1>
+      <p style={{ opacity: 0.85 }}>{msg || "Lade…"}</p>
 
-      <div style={{ marginTop: 16, opacity: 0.7, fontSize: 14 }}>
-        <div>
-          session_id: <code>{sp.get("session_id") || "-"}</code>
-        </div>
-      </div>
-    </div>
+      {status === "done" && (
+        <a href="/" style={{ display: "inline-block", marginTop: 16 }}>
+          Zurück zur App →
+        </a>
+      )}
+
+      {status === "error" && (
+        <p style={{ marginTop: 12, opacity: 0.85 }}>
+          Tipp: Prüfe, ob die URL wirklich `?session_id=...` enthält.
+        </p>
+      )}
+    </main>
   );
 }

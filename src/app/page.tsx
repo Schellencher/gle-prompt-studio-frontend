@@ -1,109 +1,27 @@
-// frontend/src/app/page.tsx
 "use client";
 
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 /* =========================
    Config
 ========================= */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:3002";
+const API_BASE = String(process.env.NEXT_PUBLIC_API_BASE || "").trim()
+  ? String(process.env.NEXT_PUBLIC_API_BASE).trim()
+  : "https://gle-prompt-studio-backend-1.onrender.com";
 
 const ENDPOINTS = {
-  generate: `${API_BASE_URL}/api/generate`,
-  health: `${API_BASE_URL}/api/health`,
-  testKey: `${API_BASE_URL}/api/test`,
-  checkout: `${API_BASE_URL}/api/create-checkout-session`,
-  billingPortal: `${API_BASE_URL}/api/create-portal-session`,
-  me: `${API_BASE_URL}/api/me`,
-  syncCheckout: `${API_BASE_URL}/api/sync-checkout-session`,
-};
+  health: `${API_BASE}/api/health`,
+  me: `${API_BASE}/api/me`,
+  testKey: `${API_BASE}/api/test`,
 
-type BackendStatus = "unknown" | "ok" | "down";
-type Plan = "FREE" | "PRO";
-type UiLang = "de" | "en";
+  checkout: `${API_BASE}/api/create-checkout-session`,
+  generate: `${API_BASE}/api/generate`,
+  sync: `${API_BASE}/api/sync-checkout-session`,
 
-type Limits = { free: number; pro: number };
-
-type Meta = {
-  model?: string;
-  tokens?: number;
-  boost?: boolean;
-  plan?: Plan;
-  isBYOK?: boolean;
-  requestId?: string;
-  buildTag?: string;
-  usingServerKey?: boolean;
-};
-
-type HistoryEntry = {
-  id: string;
-  timestamp: number;
-  useCase: string;
-  tone: string;
-  outLang: UiLang;
-  topic: string;
-  extra: string;
-  boost: boolean;
-  result: string;
-  meta?: Meta | null;
-};
-
-type StripeInfo = {
-  customerId?: string;
-  subscriptionId?: string;
-  status?: string; // active | trialing | past_due | canceled | ...
-  cancelAtPeriodEnd?: boolean;
-  currentPeriodEnd?: number | null; // ms
-  lastInvoiceStatus?: string; // paid | payment_failed
-};
-
-type MeResponseV2 = {
-  ok?: boolean;
-  user_id?: string;
-  userId?: string;
-  accountId?: string;
-  plan?: Plan;
-  usage?: { used?: number; renewAt?: number; tokens?: number; lastTs?: number };
-  stripe?: StripeInfo;
-  byokOnly?: boolean;
-  limits?: Limits;
-  buildTag?: string;
-  ts?: number;
-};
-
-type MeResponseLegacy = {
-  ok?: boolean;
-  plan?: Plan;
-  usage?: number;
-  limit?: number;
-  usageRenewDate?: string;
-  accountId?: string;
-  userId?: string;
-  user_id?: string;
-  byokOnly?: boolean;
-  limits?: Limits;
-  stripe?: StripeInfo | any;
-  buildTag?: string;
-};
-
-type MeResponseAny = MeResponseV2 | MeResponseLegacy;
-
-type HealthResponse = {
-  status?: string;
-  service?: string;
-  buildTag?: string;
-  stripe?: boolean;
-  stripeMode?: string;
-  stripePriceId?: string;
-  byokOnly?: boolean;
-  models?: { byok?: string; pro?: string; boost?: string };
-  limits?: Limits;
-  allowedOrigins?: string[];
-  ts?: number;
-};
+  billingPortal: `${API_BASE}/api/billing-portal`,
+  billingPortalFallback: `${API_BASE}/api/create-portal-session`, // optional alias on some deploys
+} as const;
 
 /* =========================
    Storage Keys
@@ -112,19 +30,74 @@ type HealthResponse = {
 const USER_ID_KEY = "gle_user_id_v1";
 const ACCOUNT_ID_KEY = "gle_account_id_v1";
 const APIKEY_STORAGE_KEY = "gle_api_key_v1";
-const PLAN_STORAGE_KEY = "gle_plan_v1";
 const UI_LANG_KEY = "gle_ui_lang_v1";
 const OUT_LANG_KEY = "gle_out_lang_v1";
+const PLAN_STORAGE_KEY = "gle_plan_v1";
 const HISTORY_STORAGE_KEY = "gle_history_v1";
 const LAST_SESSION_ID_KEY = "gle_last_checkout_session_id_v1";
 
 const MAX_HISTORY = 10;
-const DEFAULT_LIMITS: Limits = { free: 25, pro: 250 };
-const SHOW_DEV = process.env.NODE_ENV !== "production";
 
-// Mindestzeiten für UX (ms)
-const MIN_GEN_PRO_MS = 1500;
-const MIN_GEN_FREE_MS = 2500;
+/* =========================
+   Types
+========================= */
+
+type UiLang = "de" | "en";
+type OutLang = "de" | "en";
+type Plan = "FREE" | "PRO";
+type BackendStatus = "unknown" | "ok" | "down";
+
+type Health = {
+  status?: string;
+  byokOnly?: boolean;
+  stripe?: boolean;
+  stripeMode?: string;
+  stripePriceId?: string;
+  models?: { byok?: string; pro?: string; boost?: string };
+  limits?:
+    | { free?: number; pro?: number }
+    | { FREE_LIMIT?: number; PRO_LIMIT?: number };
+};
+
+type MeResp = {
+  ok?: boolean;
+  plan?: Plan;
+
+  // can be ms or seconds or absent
+  renewAt?: number;
+  cancelAt?: number;
+
+  stripe?: {
+    mode?: string;
+    customerId?: string;
+    subscriptionId?: string;
+    hasCustomerId?: boolean; // seen in your output
+  };
+
+  usage?: {
+    used?: number;
+    count?: number;
+    tokens?: number;
+    lastTs?: number;
+    monthKey?: string;
+  };
+
+  limits?:
+    | { free?: number; pro?: number }
+    | { FREE_LIMIT?: number; PRO_LIMIT?: number };
+};
+
+type HistoryEntry = {
+  id: string;
+  timestamp: number;
+  useCase: string;
+  tone: string;
+  topic: string;
+  extra: string;
+  outLang: OutLang;
+  boost: boolean;
+  result: string;
+};
 
 /* =========================
    i18n
@@ -135,15 +108,16 @@ const TXT: Record<
   {
     title: string;
     subtitle: string;
+
+    backend: string;
+    byok: string;
+    plan: string;
+    stripeLabel: string;
+
     checkoutOpen: string;
     manage: string;
     sync: string;
     restore: string;
-
-    backend: string;
-    byok: string;
-    ui: string;
-    output: string;
 
     apiKeyTitle: string;
     show: string;
@@ -156,6 +130,8 @@ const TXT: Record<
     tone: string;
     topic: string;
     extra: string;
+    outputLang: string;
+
     boost: string;
     boostHint: string;
 
@@ -172,6 +148,7 @@ const TXT: Record<
     planFree: string;
     planPro: string;
     resetOn: string;
+    cancelScheduled: string;
 
     proModalTitle: string;
     proModalText: string;
@@ -186,41 +163,48 @@ const TXT: Record<
 
     missingIdsTitle: string;
     missingIdsText: string;
-    ok: string;
 
+    ok: string;
     close: string;
 
-    cancelScheduled: string;
-    stripeLabel: string;
+    portalError: string;
+    missingSession: string;
+    synced: string;
+
+    noKeySet: string;
+    portalNeedsCustomer: string;
   }
 > = {
   de: {
     title: "GLE Prompt Studio",
     subtitle:
       "Master-Prompts für Social Media, Blog, Produkttexte & Newsletter.",
+
+    backend: "Backend",
+    byok: "BYOK",
+    plan: "Plan",
+    stripeLabel: "Stripe",
+
     checkoutOpen: "Checkout öffnen",
     manage: "Abo verwalten",
     sync: "Sync",
     restore: "Account wiederherstellen",
 
-    backend: "Backend",
-    byok: "BYOK",
-    ui: "UI",
-    output: "Output",
-
-    apiKeyTitle: "OpenAI API Key (BYOK)",
-    show: "Show",
-    hide: "Hide",
-    test: "Test",
+    apiKeyTitle: "OpenAI API-Key (BYOK)",
+    show: "Anzeigen",
+    hide: "Ausblenden",
+    test: "Testen",
     keyHintByokOnly:
       "Hinweis: BYOK-Only aktiv. Ohne eigenen Key kann FREE nicht generieren.",
     keyHintNoKey:
       "Hinweis: Kein Key gesetzt. PRO kann trotzdem laufen (Server-Credits), wenn dein Account PRO ist.",
 
-    useCase: "Use Case",
+    useCase: "Anwendungsfall",
     tone: "Ton",
     topic: "Thema / Kontext",
-    extra: "Extra Hinweise",
+    extra: "Extra Hinweise (z.B. „3 Varianten, Hook + CTA“)",
+    outputLang: "Output-Sprache",
+
     boost: "Quality Boost",
     boostHint: "Mehr Tiefe & Qualität",
 
@@ -237,6 +221,7 @@ const TXT: Record<
     planFree: "FREE",
     planPro: "PRO",
     resetOn: "Reset am",
+    cancelScheduled: "Kündigung vorgemerkt bis",
 
     proModalTitle: "GLE PRO",
     proModalText:
@@ -258,22 +243,28 @@ const TXT: Record<
     ok: "OK",
     close: "✕",
 
-    cancelScheduled: "Kündigung vorgemerkt bis",
-    stripeLabel: "Stripe",
+    portalError: "Billing-Portal Fehler",
+    missingSession: "Keine session_id vorhanden.",
+    synced: "Sync erfolgreich.",
+
+    noKeySet: "Kein Key gesetzt.",
+    portalNeedsCustomer:
+      "Stripe Customer fehlt (missing_customer_id). → Bitte einmal Checkout starten ODER per session_id syncen.",
   },
   en: {
     title: "GLE Prompt Studio",
     subtitle:
       "Master prompts for social media, blogs, product copy & newsletters.",
+
+    backend: "Backend",
+    byok: "BYOK",
+    plan: "Plan",
+    stripeLabel: "Stripe",
+
     checkoutOpen: "Open checkout",
     manage: "Manage subscription",
     sync: "Sync",
     restore: "Restore account",
-
-    backend: "Backend",
-    byok: "BYOK",
-    ui: "UI",
-    output: "Output",
 
     apiKeyTitle: "OpenAI API Key (BYOK)",
     show: "Show",
@@ -287,7 +278,9 @@ const TXT: Record<
     useCase: "Use case",
     tone: "Tone",
     topic: "Topic / context",
-    extra: "Extra notes",
+    extra: "Extra notes (e.g. “3 variants, hook + CTA”)",
+    outputLang: "Output language",
+
     boost: "Quality Boost",
     boostHint: "More depth & quality",
 
@@ -304,6 +297,7 @@ const TXT: Record<
     planFree: "FREE",
     planPro: "PRO",
     resetOn: "Resets on",
+    cancelScheduled: "Cancel scheduled for",
 
     proModalTitle: "GLE PRO",
     proModalText:
@@ -325,945 +319,754 @@ const TXT: Record<
     ok: "OK",
     close: "✕",
 
-    cancelScheduled: "Cancel scheduled for",
-    stripeLabel: "Stripe",
+    portalError: "Billing Portal error",
+    missingSession: "No session_id available.",
+    synced: "Sync successful.",
+
+    noKeySet: "No key set.",
+    portalNeedsCustomer:
+      "Stripe customer missing (missing_customer_id). → Start checkout once OR sync via session_id.",
   },
 };
 
 /* =========================
-   Helpers
+   Small helpers
 ========================= */
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function safeId(): string {
-  const uuid =
-    typeof crypto !== "undefined" && (crypto as any)?.randomUUID
-      ? (crypto as any).randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random()
-          .toString(16)
-          .slice(2)}`;
-  return String(uuid)
-    .replace(/[^a-zA-Z0-9_-]/g, "")
-    .slice(0, 48);
-}
-
-function safeJsonParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
+function safeGet(key: string) {
   try {
-    return JSON.parse(raw) as T;
+    return localStorage.getItem(key) || "";
   } catch {
-    return null;
+    return "";
   }
 }
-
-function pickOutput(data: any): string {
-  return (
-    data?.result ||
-    data?.output ||
-    data?.text ||
-    data?.output_text ||
-    data?.message ||
-    ""
-  )
-    .toString()
-    .trim();
-}
-
-function formatGermanDate(d: Date): string {
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
-}
-
-function safePercent(used: number, limit: number): number {
-  const u = Number.isFinite(used) ? used : 0;
-  const l = Number.isFinite(limit) ? limit : 0;
-  if (!l || l <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((u / l) * 100)));
-}
-
-// Creates IDs if missing (for app usage + checkout + generate)
-function ensureIdsNow(currentUserId?: string, currentAccountId?: string) {
-  const uid =
-    (currentUserId && currentUserId.trim()) ||
-    (() => {
-      try {
-        const x = localStorage.getItem(USER_ID_KEY);
-        if (x && x.trim()) return x.trim();
-      } catch {}
-      const created = `u_${safeId()}`;
-      try {
-        localStorage.setItem(USER_ID_KEY, created);
-      } catch {}
-      return created;
-    })();
-
-  const acc =
-    (currentAccountId && currentAccountId.trim()) ||
-    (() => {
-      try {
-        const x = localStorage.getItem(ACCOUNT_ID_KEY);
-        if (x && x.trim()) return x.trim();
-      } catch {}
-      const created = `acc_${safeId()}`;
-      try {
-        localStorage.setItem(ACCOUNT_ID_KEY, created);
-      } catch {}
-      return created;
-    })();
-
+function safeSet(key: string, value: string) {
   try {
-    localStorage.setItem(USER_ID_KEY, uid);
-    localStorage.setItem(ACCOUNT_ID_KEY, acc);
+    localStorage.setItem(key, value);
   } catch {}
-
-  return { uid, acc };
 }
-
-// Strict read (no auto-create) — for Billing Portal!
-function readIds() {
+function safeRemove(key: string) {
   try {
-    const uid = (localStorage.getItem(USER_ID_KEY) || "").trim();
-    const acc = (localStorage.getItem(ACCOUNT_ID_KEY) || "").trim();
-    return { uid, acc };
+    localStorage.removeItem(key);
+  } catch {}
+}
+
+function randomId(prefix: string) {
+  const webCrypto = (globalThis as any).crypto as Crypto | undefined;
+  if (webCrypto?.getRandomValues) {
+    const bytes = new Uint8Array(8);
+    webCrypto.getRandomValues(bytes);
+    const hex = Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return `${prefix}_${hex}`;
+  }
+  return `${prefix}_${Math.random().toString(16).slice(2)}${Math.random()
+    .toString(16)
+    .slice(2)}`.slice(0, 28);
+}
+
+function normalizeTs(ts?: number) {
+  if (!ts) return 0;
+  // if seconds (10 digits) -> convert to ms
+  return ts < 1_000_000_000_000 ? ts * 1000 : ts;
+}
+
+function formatDate(ts?: number, lang: UiLang = "de") {
+  const n = normalizeTs(ts);
+  if (!n) return "";
+  try {
+    const d = new Date(n);
+    return d.toLocaleDateString(lang === "de" ? "de-DE" : "en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
   } catch {
-    return { uid: "", acc: "" };
+    return "";
   }
 }
 
-function outLangLabel(lang: UiLang, uiLang: UiLang) {
-  if (uiLang === "en") return lang === "de" ? "German" : "English";
-  return lang === "de" ? "Deutsch" : "Englisch";
-}
-
-function outLangForBackend(lang: UiLang) {
-  return lang === "de" ? "Deutsch" : "English";
-}
-
-function normalizeMe(data: MeResponseAny): {
-  plan: Plan;
-  used: number;
-  limit: number;
-  renewAtMs: number | null;
-  byokOnly: boolean;
-  stripe: {
-    status: string;
-    cancelAtPeriodEnd: boolean;
-    currentPeriodEnd: number | null;
-    lastInvoiceStatus: string;
-  };
-} {
-  const plan: Plan = data?.plan === "PRO" ? "PRO" : "FREE";
-
-  const limits: Limits = (data as any)?.limits || DEFAULT_LIMITS;
-  const limit =
-    typeof (data as any)?.limit === "number"
-      ? Number((data as any).limit)
-      : plan === "PRO"
-      ? Number(limits?.pro ?? DEFAULT_LIMITS.pro)
-      : Number(limits?.free ?? DEFAULT_LIMITS.free);
-
-  const v2Usage = (data as MeResponseV2)?.usage;
-  const used =
-    typeof v2Usage?.used === "number"
-      ? v2Usage.used
-      : typeof (data as MeResponseLegacy)?.usage === "number"
-      ? (data as MeResponseLegacy).usage || 0
-      : 0;
-
-  let renewAtMs: number | null = null;
-  if (typeof v2Usage?.renewAt === "number") renewAtMs = v2Usage.renewAt;
-  else {
-    const raw = String((data as MeResponseLegacy)?.usageRenewDate || "").trim();
-    if (raw) {
-      const d = new Date(raw);
-      if (!isNaN(d.getTime())) renewAtMs = d.getTime();
-    }
+async function readJsonOrText(res: Response) {
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    return res.json().catch(() => ({}));
   }
+  const text = await res.text().catch(() => "");
+  return { _text: text };
+}
 
-  const byokOnly =
-    typeof (data as any)?.byokOnly === "boolean"
-      ? !!(data as any).byokOnly
-      : false;
+async function fetchJsonTry(url: string, init?: RequestInit) {
+  const res = await fetch(url, { cache: "no-store", ...init });
+  const data = await readJsonOrText(res);
+  return { res, data };
+}
 
-  const s = ((data as any)?.stripe || {}) as StripeInfo;
-  const stripe = {
-    status: String(s?.status || ""),
-    cancelAtPeriodEnd: !!s?.cancelAtPeriodEnd,
-    currentPeriodEnd:
-      typeof s?.currentPeriodEnd === "number" ? s.currentPeriodEnd : null,
-    lastInvoiceStatus: String(s?.lastInvoiceStatus || ""),
+function headersWithIds(uid: string, acc: string, apiKey?: string) {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-gle-user": uid,
+    "x-gle-account-id": acc,
   };
+  if (apiKey) h["x-gle-api-key"] = apiKey;
+  return h;
+}
 
-  return { plan, used, limit, renewAtMs, byokOnly, stripe };
+function pickLimits(obj: any, fallbackFree: number, fallbackPro: number) {
+  const free =
+    Number(obj?.free ?? obj?.FREE_LIMIT ?? obj?.FREE ?? fallbackFree) ||
+    fallbackFree;
+  const pro =
+    Number(obj?.pro ?? obj?.PRO_LIMIT ?? obj?.PRO ?? fallbackPro) ||
+    fallbackPro;
+  return { free, pro };
+}
+
+function pickUsed(obj: any) {
+  const u = obj?.used ?? obj?.count ?? 0;
+  const n = Number(u);
+  return Number.isFinite(n) ? n : 0;
 }
 
 /* =========================
-   UI Styles
+   Modal
 ========================= */
 
-const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "#050608",
-  color: "#e8e8ee",
-  padding: 24,
-};
+function Modal({
+  title,
+  children,
+  onClose,
+  closeLabel,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  closeLabel: string;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,.65)",
+        display: "grid",
+        placeItems: "center",
+        padding: 14,
+        zIndex: 50,
+      }}
+      onMouseDown={onClose}
+    >
+      <div
+        style={{
+          width: "min(760px, 96vw)",
+          borderRadius: 18,
+          border: "1px solid #202230",
+          background: "#0b0d14",
+          color: "#e7e7ff",
+          padding: 14,
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
+          <div style={{ fontWeight: 900 }}>{title}</div>
+          <button
+            onClick={onClose}
+            style={{
+              borderRadius: 12,
+              border: "1px solid #202230",
+              background: "#0f1118",
+              color: "#e7e7ff",
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+            aria-label={closeLabel}
+            title={closeLabel}
+            type="button"
+          >
+            {closeLabel}
+          </button>
+        </div>
 
-const wrapStyle: React.CSSProperties = {
-  maxWidth: 980,
-  margin: "0 auto",
-  display: "grid",
-  gap: 14,
-};
-
-const cardStyle: React.CSSProperties = {
-  background: "#0b0c10",
-  border: "1px solid #202230",
-  borderRadius: 16,
-  padding: 16,
-};
-
-const rowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-  alignItems: "center",
-};
-
-const btnStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: "1px solid #202230",
-  background: "#0f1118",
-  color: "#e8e8ee",
-  cursor: "pointer",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  ...btnStyle,
-  border: "1px solid #2b3a2b",
-  background: "linear-gradient(90deg,#166534,#14532d)",
-  fontWeight: 800,
-};
-
-const miniBtnStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #202230",
-  background: "#0f1118",
-  color: "#e8e8ee",
-  cursor: "pointer",
-};
-
-const pill = (ok: boolean): React.CSSProperties => ({
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: "1px solid #202230",
-  background: ok ? "rgba(20,83,45,.35)" : "rgba(185,28,28,.25)",
-  color: "#e8e8ee",
-  fontSize: 12,
-  display: "inline-flex",
-  gap: 8,
-  alignItems: "center",
-});
-
-const toggleWrap: React.CSSProperties = {
-  display: "inline-flex",
-  border: "1px solid #202230",
-  borderRadius: 999,
-  overflow: "hidden",
-};
-
-const toggleBtn = (active: boolean): React.CSSProperties => ({
-  padding: "6px 10px",
-  fontSize: 12,
-  border: "none",
-  background: active ? "#161a27" : "transparent",
-  color: "#e8e8ee",
-  cursor: "pointer",
-});
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: "1px solid #202230",
-  background: "#050608",
-  color: "#e8e8ee",
-};
-
-const labelStyle: React.CSSProperties = { fontSize: 12, opacity: 0.8 };
-
-const modalOverlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,.6)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 18,
-  zIndex: 9999,
-};
-
-const modalCard: React.CSSProperties = {
-  width: "100%",
-  maxWidth: 520,
-  background: "#0b0c10",
-  border: "1px solid #202230",
-  borderRadius: 16,
-  padding: 16,
-};
+        <div style={{ marginTop: 12 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
 
 /* =========================
    Page
 ========================= */
 
 export default function Page() {
-  const sp = useSearchParams();
-
+  // prefs
   const [uiLang, setUiLang] = useState<UiLang>("de");
-  const [outLang, setOutLang] = useState<UiLang>("de");
+  const [outLang, setOutLang] = useState<OutLang>("de");
   const t = TXT[uiLang];
 
+  // backend
   const [backendStatus, setBackendStatus] = useState<BackendStatus>("unknown");
-  const [healthModel, setHealthModel] = useState<string>("");
-  const [healthBuildTag, setHealthBuildTag] = useState<string>("");
   const [byokOnly, setByokOnly] = useState(false);
-  const [models, setModels] = useState<{
-    byok: string;
-    pro: string;
-    boost: string;
-  }>({
+  const [stripeExtra, setStripeExtra] = useState("");
+  const [models, setModels] = useState({
     byok: "gpt-4o-mini",
     pro: "gpt-4o-mini",
-    boost: "gpt-5",
+    boost: "gpt-4o",
   });
+  const [limits, setLimits] = useState({ free: 25, pro: 250 });
 
+  // account
   const [plan, setPlan] = useState<Plan>("FREE");
+  const [renewAt, setRenewAt] = useState<number | undefined>(undefined);
+  const [cancelAt, setCancelAt] = useState<number | undefined>(undefined);
   const [used, setUsed] = useState(0);
-  const [limit, setLimit] = useState(DEFAULT_LIMITS.free);
-  const [renewLabel, setRenewLabel] = useState<string>("");
 
-  // Stripe-visible status
-  const [stripeStatus, setStripeStatus] = useState<string>("");
-  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
-  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<number | null>(null);
-  const [lastInvoiceStatus, setLastInvoiceStatus] = useState<string>("");
+  const isPro = plan === "PRO";
+  const limit = isPro ? limits.pro : limits.free;
+  const progress = Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
 
+  // api key
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [keyStatus, setKeyStatus] = useState<"idle" | "ok" | "bad">("idle");
   const [keyMsg, setKeyMsg] = useState("");
 
+  // generator inputs
   const [useCase, setUseCase] = useState("Social Media Post");
   const [tone, setTone] = useState("Neutral");
   const [topic, setTopic] = useState("");
   const [extra, setExtra] = useState("");
   const [boost, setBoost] = useState(false);
 
-  const [isGenerating, setIsGenerating] = useState(false);
+  // output
   const [output, setOutput] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // ui messages
   const [error, setError] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
 
+  // history
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const outputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // modals
   const [showProModal, setShowProModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showMissingIdsModal, setShowMissingIdsModal] = useState(false);
 
+  // restore
   const [restoreSessionId, setRestoreSessionId] = useState("");
   const [lastSessionId, setLastSessionId] = useState("");
 
-  const isPro = plan === "PRO";
-  const progress = useMemo(() => safePercent(used, limit), [used, limit]);
+  const renewText = useMemo(() => {
+    if (!renewAt) return "";
+    return `${t.resetOn} ${formatDate(renewAt, uiLang)}`;
+  }, [renewAt, uiLang, t.resetOn]);
 
-  /* -------------------------
-     Load local settings
-  -------------------------- */
-  useEffect(() => {
+  const cancelText = useMemo(() => {
+    if (!cancelAt) return "";
+    return `${t.cancelScheduled} ${formatDate(cancelAt, uiLang)}`;
+  }, [cancelAt, uiLang, t.cancelScheduled]);
+
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    console.log("[GLE]", msg);
+    window.clearTimeout((showToast as any)._t);
+    (showToast as any)._t = window.setTimeout(() => setToastMsg(""), 2600);
+  }
+
+  function readIds() {
+    const uid = safeGet(USER_ID_KEY).trim();
+    const acc = safeGet(ACCOUNT_ID_KEY).trim();
+    return { uid, acc };
+  }
+
+  function ensureIds() {
+    const { uid, acc } = readIds();
+    if (uid && acc) return { uid, acc };
+
+    const newUid = uid || randomId("u");
+    const newAcc = acc || randomId("acc");
+    safeSet(USER_ID_KEY, newUid);
+    safeSet(ACCOUNT_ID_KEY, newAcc);
+    return { uid: newUid, acc: newAcc };
+  }
+
+  function applyMe(me: MeResp) {
+    const newPlan = (me.plan || "FREE") as Plan;
+    setPlan(newPlan);
+    safeSet(PLAN_STORAGE_KEY, newPlan);
+
+    setRenewAt(
+      typeof me.renewAt === "number" ? normalizeTs(me.renewAt) : undefined
+    );
+    setCancelAt(
+      typeof me.cancelAt === "number" ? normalizeTs(me.cancelAt) : undefined
+    );
+
+    if (me.limits) {
+      const next = pickLimits(me.limits as any, limits.free, limits.pro);
+      setLimits(next);
+    }
+
+    if (me.usage) setUsed(pickUsed(me.usage));
+
+    const stripeMode = me.stripe?.mode
+      ? String(me.stripe.mode).toUpperCase()
+      : "";
+    if (stripeMode) setStripeExtra(stripeMode);
+  }
+
+  async function loadHealth() {
     try {
-      const storedUi = (
-        localStorage.getItem(UI_LANG_KEY) || ""
-      ).trim() as UiLang;
-      const storedOut = (
-        localStorage.getItem(OUT_LANG_KEY) || ""
-      ).trim() as UiLang;
-      const storedKey = (localStorage.getItem(APIKEY_STORAGE_KEY) || "").trim();
-      const storedPlan = (
-        localStorage.getItem(PLAN_STORAGE_KEY) || ""
-      ).trim() as Plan;
-      const storedHistory = safeJsonParse<HistoryEntry[]>(
-        localStorage.getItem(HISTORY_STORAGE_KEY)
-      );
-      const storedLastSession = (
-        localStorage.getItem(LAST_SESSION_ID_KEY) || ""
-      ).trim();
+      const { res, data } = await fetchJsonTry(ENDPOINTS.health, {
+        method: "GET",
+      });
+      if (!res.ok) throw new Error("health_down");
 
-      if (storedUi === "de" || storedUi === "en") setUiLang(storedUi);
-      if (storedOut === "de" || storedOut === "en") setOutLang(storedOut);
-      if (storedKey) setApiKey(storedKey);
-      if (storedPlan === "FREE" || storedPlan === "PRO") setPlan(storedPlan);
-      if (Array.isArray(storedHistory))
-        setHistory(storedHistory.slice(0, MAX_HISTORY));
-      if (storedLastSession) setLastSessionId(storedLastSession);
-    } catch {}
-  }, []);
-
-  /* -------------------------
-     Persist local settings
-  -------------------------- */
-  useEffect(() => {
-    try {
-      localStorage.setItem(UI_LANG_KEY, uiLang);
-    } catch {}
-  }, [uiLang]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(OUT_LANG_KEY, outLang);
-    } catch {}
-  }, [outLang]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(APIKEY_STORAGE_KEY, apiKey.trim());
-    } catch {}
-  }, [apiKey]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        HISTORY_STORAGE_KEY,
-        JSON.stringify(history.slice(0, MAX_HISTORY))
-      );
-    } catch {}
-  }, [history]);
-
-  useEffect(() => {
-    try {
-      if (lastSessionId)
-        localStorage.setItem(LAST_SESSION_ID_KEY, lastSessionId);
-    } catch {}
-  }, [lastSessionId]);
-
-  /* -------------------------
-     Health
-  -------------------------- */
-  async function refreshHealth() {
-    try {
-      const r = await fetch(ENDPOINTS.health, { method: "GET" });
-      const data = (await r.json().catch(() => ({}))) as HealthResponse;
-
-      if (!r.ok) {
-        setBackendStatus("down");
-        return;
-      }
-
+      const h = data as Health;
       setBackendStatus("ok");
-      setHealthModel(String(data?.service || "ok"));
-      setHealthBuildTag(String(data?.buildTag || ""));
-      if (typeof data?.byokOnly === "boolean") setByokOnly(!!data.byokOnly);
+      setByokOnly(!!h.byokOnly);
 
-      const mb = String(data?.models?.byok || models.byok);
-      const mp = String(data?.models?.pro || models.pro);
-      const mboost = String(data?.models?.boost || models.boost);
-      setModels({ byok: mb, pro: mp, boost: mboost });
+      setModels({
+        byok: h.models?.byok || "gpt-4o-mini",
+        pro: h.models?.pro || "gpt-4o-mini",
+        boost: h.models?.boost || "gpt-4o",
+      });
+
+      if (h.limits) setLimits(pickLimits(h.limits as any, 25, 250));
+
+      const stripeInfo =
+        h.stripe === false
+          ? "disabled"
+          : `${String(h.stripeMode || "").toUpperCase()}${
+              h.stripePriceId ? ` · ${h.stripePriceId}` : ""
+            }`.trim();
+
+      if (stripeInfo) setStripeExtra(stripeInfo);
     } catch {
       setBackendStatus("down");
     }
   }
 
-  /* -------------------------
-     /me
-  -------------------------- */
-  async function refreshMe() {
-    try {
-      const { uid, acc } = ensureIdsNow();
+  async function loadMe() {
+    const { uid, acc } = ensureIds();
+    const key = safeGet(APIKEY_STORAGE_KEY).trim();
 
-      const r = await fetch(ENDPOINTS.me, {
+    try {
+      const { res, data } = await fetchJsonTry(ENDPOINTS.me, {
         method: "GET",
-        headers: {
-          "x-gle-user": uid,
-          "x-gle-account-id": acc,
-        },
+        headers: headersWithIds(uid, acc, key),
       });
 
-      const data = (await r.json().catch(() => ({}))) as MeResponseAny;
-      if (!r.ok) return;
-
-      const n = normalizeMe(data);
-
-      setPlan(n.plan);
-      setUsed(n.used);
-      setLimit(n.limit);
-      setByokOnly(
-        typeof (data as any)?.byokOnly === "boolean" ? n.byokOnly : byokOnly
-      );
-
-      if (n.renewAtMs) {
-        const d = new Date(n.renewAtMs);
-        setRenewLabel(
-          uiLang === "de"
-            ? `${t.resetOn} ${formatGermanDate(d)}`
-            : `${t.resetOn} ${d.toLocaleDateString()}`
-        );
-      } else {
-        setRenewLabel("");
-      }
-
-      setStripeStatus(n.stripe.status);
-      setCancelAtPeriodEnd(n.stripe.cancelAtPeriodEnd);
-      setCurrentPeriodEnd(n.stripe.currentPeriodEnd);
-      setLastInvoiceStatus(n.stripe.lastInvoiceStatus);
-
-      try {
-        localStorage.setItem(PLAN_STORAGE_KEY, n.plan);
-      } catch {}
-    } catch {}
+      if (!res.ok) return;
+      applyMe(data as MeResp);
+    } catch {
+      // ignore
+    }
   }
 
-  /* -------------------------
-     Mount
-  -------------------------- */
   useEffect(() => {
-    refreshHealth();
-    refreshMe();
+    const u = (safeGet(UI_LANG_KEY).trim() as UiLang) || "de";
+    const o = (safeGet(OUT_LANG_KEY).trim() as OutLang) || "de";
+    if (u === "de" || u === "en") setUiLang(u);
+    if (o === "de" || o === "en") setOutLang(o);
 
-    const id = setInterval(() => {
-      refreshHealth();
-    }, 15000);
+    const p = safeGet(PLAN_STORAGE_KEY).trim() as Plan;
+    if (p === "FREE" || p === "PRO") setPlan(p);
 
-    return () => clearInterval(id);
+    const k = safeGet(APIKEY_STORAGE_KEY).trim();
+    if (k) setApiKey(k);
+
+    const ls = safeGet(LAST_SESSION_ID_KEY).trim();
+    if (ls) setLastSessionId(ls);
+
+    try {
+      const raw = safeGet(HISTORY_STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
+      if (Array.isArray(parsed)) setHistory(parsed.slice(0, MAX_HISTORY));
+    } catch {}
+
+    ensureIds();
+    loadHealth();
+    loadMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* -------------------------
-     Return from billing/paid → refresh twice + clean URL
-  -------------------------- */
-  useEffect(() => {
-    const fromBilling = sp.get("from") === "billing";
-    const paid = sp.get("paid") === "1";
-    if (!fromBilling && !paid) return;
+  useEffect(() => safeSet(UI_LANG_KEY, uiLang), [uiLang]);
+  useEffect(() => safeSet(OUT_LANG_KEY, outLang), [outLang]);
+  useEffect(() => safeSet(APIKEY_STORAGE_KEY, apiKey.trim()), [apiKey]);
 
-    refreshMe();
-    const tmr = window.setTimeout(() => refreshMe(), 1200);
+  function pushHistory(entry: HistoryEntry) {
+    const next = [entry, ...history].slice(0, MAX_HISTORY);
+    setHistory(next);
+    safeSet(HISTORY_STORAGE_KEY, JSON.stringify(next));
+  }
 
-    // clean URL
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("from");
-      url.searchParams.delete("paid");
-      const next =
-        url.pathname +
-        (url.search ? url.search : "") +
-        (url.hash ? url.hash : "");
-      window.history.replaceState({}, "", next);
-    } catch {}
+  function clearHistory() {
+    setHistory([]);
+    safeRemove(HISTORY_STORAGE_KEY);
+  }
 
-    return () => window.clearTimeout(tmr);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp]);
-
-  /* -------------------------
-     If session_id in URL → open restore modal
-  -------------------------- */
-  useEffect(() => {
-    const sid = String(sp.get("session_id") || "").trim();
-    if (!sid) return;
-
-    setRestoreSessionId(sid);
-    setShowRestoreModal(true);
-
-    // clean URL
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("session_id");
-      window.history.replaceState({}, "", url.pathname + url.search);
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp]);
-
-  /* -------------------------
-     Key test
-  -------------------------- */
   async function testKey() {
     setKeyStatus("idle");
     setKeyMsg("");
-
-    try {
-      const k = apiKey.trim();
-      const r = await fetch(ENDPOINTS.testKey, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(k ? { "x-openai-key": k } : {}),
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await r.json().catch(() => ({} as any));
-
-      if (r.ok) {
-        setKeyStatus("ok");
-        setKeyMsg(String(data?.message || "OK"));
-      } else {
-        setKeyStatus("bad");
-        setKeyMsg(String(data?.message || data?.error || "invalid_key"));
-      }
-    } catch {
+    const key = apiKey.trim();
+    if (!key) {
       setKeyStatus("bad");
-      setKeyMsg("network_error");
+      setKeyMsg(t.noKeySet);
+      return;
     }
-  }
 
-  /* -------------------------
-     Stripe: Checkout
-  -------------------------- */
-  async function openCheckout() {
-    setError("");
     try {
-      const { uid, acc } = ensureIdsNow();
-      const r = await fetch(ENDPOINTS.checkout, {
+      const { uid, acc } = ensureIds();
+      const { res, data } = await fetchJsonTry(ENDPOINTS.testKey, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gle-user": uid,
-          "x-gle-account-id": acc,
-        },
+        headers: headersWithIds(uid, acc, key),
         body: JSON.stringify({}),
       });
 
-      const data = await r.json().catch(() => ({} as any));
-      if (!r.ok) {
-        setError(String(data?.error || "checkout_error"));
+      if (!res.ok) {
+        setKeyStatus("bad");
+        setKeyMsg(String((data as any)?.error || `HTTP ${res.status}`));
         return;
       }
 
-      const url = String(data?.url || "").trim();
-      const sid = String(data?.sessionId || "").trim();
-      if (sid) setLastSessionId(sid);
-
-      if (url) window.location.href = url;
-    } catch {
-      setError("network_error");
+      setKeyStatus("ok");
+      setKeyMsg("OK");
+    } catch (e: any) {
+      setKeyStatus("bad");
+      setKeyMsg(String(e?.message || "error"));
     }
   }
 
-  /* -------------------------
-     Stripe: Billing Portal (STRICT IDs)
-  -------------------------- */
-  async function openBillingPortal() {
+  async function openCheckout() {
+    setError("");
+    const { uid, acc } = ensureIds();
+
     try {
-      const acc = (localStorage.getItem("gle_account_id_v1") || "").trim();
-      const uid = (localStorage.getItem("gle_user_id_v1") || "").trim();
-
-      if (!acc || !uid) {
-        throw new Error("Missing accountId/userId in localStorage.");
-      }
-
-      // ✅ WICHTIG: richtiger Endpoint
-      const r = await fetch(ENDPOINTS.billingPortal, {
+      const { res, data } = await fetchJsonTry(ENDPOINTS.checkout, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gle-account-id": acc,
-          "x-gle-user": uid,
-          // optional: manche Stellen schicken das zusätzlich
-          "x-gle-acc": acc,
-        },
-        body: JSON.stringify({}),
+        headers: headersWithIds(uid, acc, apiKey.trim()),
+        body: JSON.stringify({ userId: uid, accountId: acc }),
       });
 
-      const data = await r.json().catch(() => ({} as any));
+      const url = String((data as any)?.url || "");
+      const sessionId = String((data as any)?.sessionId || "");
 
-      if (!r.ok || !data?.url) {
-        // Backend gibt bei fehlendem customerId z.B. missing_customer_id / no_customer zurück
+      if (!res.ok || !url) {
         throw new Error(
-          data?.message || data?.error || `portal_failed (${r.status})`
+          String((data as any)?.error || `checkout_${res.status}`)
         );
       }
 
-      // ✅ Weiterleitung ins Stripe Portal
-      window.location.href = data.url as string;
+      if (sessionId) {
+        safeSet(LAST_SESSION_ID_KEY, sessionId);
+        setLastSessionId(sessionId);
+      }
+
+      window.location.href = url;
     } catch (e: any) {
-      console.error(e);
-      // Wenn du ein setError/toast hast, hier nutzen – sonst erstmal alert:
-      alert(e?.message || "Billing portal failed");
+      setError(String(e?.message || "checkout_failed"));
     }
   }
 
-  /* -------------------------
-     Sync: by session_id (restore flow)
-  -------------------------- */
-  async function syncBySessionId(sessionIdRaw?: string) {
+  async function openBillingPortal() {
     setError("");
 
-    const sessionId = String(sessionIdRaw || "").trim();
-    if (!sessionId) {
-      setError("missing_session_id");
+    const { uid, acc } = readIds();
+    if (!uid || !acc) {
+      setShowMissingIdsModal(true);
       return;
     }
 
+    const body = JSON.stringify({ userId: uid, accountId: acc });
+    const hdrs = headersWithIds(uid, acc, apiKey.trim());
+
     try {
-      const ids = ensureIdsNow();
-      const r = await fetch(ENDPOINTS.syncCheckout, {
+      let { res, data } = await fetchJsonTry(ENDPOINTS.billingPortal, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gle-user": ids.uid,
-          "x-gle-account-id": ids.acc,
-        },
-        body: JSON.stringify({ sessionId }),
+        headers: hdrs,
+        body,
       });
 
-      const data = await r.json().catch(() => ({} as any));
-      if (!r.ok) {
-        setError(String(data?.message || data?.error || "sync_error"));
+      if (res.status === 404) {
+        showToast(`${t.portalError}: 404 → fallback`);
+        ({ res, data } = await fetchJsonTry(ENDPOINTS.billingPortalFallback, {
+          method: "POST",
+          headers: hdrs,
+          body,
+        }));
+      }
+
+      const url = String((data as any)?.url || "");
+
+      if (!res.ok || !url) {
+        const err = String((data as any)?.error || `portal_${res.status}`);
+
+        if (err === "missing_customer_id") {
+          showToast(t.portalNeedsCustomer);
+          setShowRestoreModal(true);
+          return;
+        }
+
+        showToast(`${t.portalError}: ${err}`);
         return;
       }
 
-      await refreshMe();
-      setShowRestoreModal(false);
-      setRestoreSessionId("");
-    } catch {
-      setError("network_error");
+      window.location.href = url;
+    } catch (e: any) {
+      showToast(`${t.portalError}: ${String(e?.message || "unknown_error")}`);
     }
   }
 
-  /* -------------------------
-     Generate
-  -------------------------- */
+  async function syncCheckout(sessionIdRaw?: string) {
+    setError("");
+
+    const sessionId = String(
+      sessionIdRaw || restoreSessionId || lastSessionId || ""
+    ).trim();
+    if (!sessionId) {
+      showToast(t.missingSession);
+      return;
+    }
+
+    const { uid, acc } = ensureIds();
+
+    try {
+      const { res, data } = await fetchJsonTry(ENDPOINTS.sync, {
+        method: "POST",
+        headers: headersWithIds(uid, acc, apiKey.trim()),
+        body: JSON.stringify({ sessionId, userId: uid, accountId: acc }),
+      });
+
+      if (res.status === 404) {
+        showToast(`Sync 404 → ${ENDPOINTS.sync}`);
+        return;
+      }
+      if (!res.ok)
+        throw new Error(String((data as any)?.error || `sync_${res.status}`));
+
+      safeSet(LAST_SESSION_ID_KEY, sessionId);
+      setLastSessionId(sessionId);
+
+      await loadMe();
+      showToast(t.synced);
+    } catch (e: any) {
+      showToast(`Sync error: ${String(e?.message || "unknown_error")}`);
+    }
+  }
+
   async function onGenerate(e: FormEvent) {
     e.preventDefault();
     setError("");
-    setOutput("");
-    setCopyState("idle");
 
-    const topicTrim = topic.trim();
-    if (!topicTrim) {
-      setError("missing_topic");
-      return;
-    }
-
-    const { uid, acc } = ensureIdsNow();
-
-    const started = Date.now();
-    setIsGenerating(true);
+    const { uid, acc } = ensureIds();
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "x-gle-user": uid,
-        "x-gle-account-id": acc,
-      };
+      setIsGenerating(true);
 
-      const k = apiKey.trim();
-      if (k) headers["x-openai-key"] = k;
-
-      const payload = {
-        useCase,
-        tone,
-        language: outLangForBackend(outLang),
-        topic: topicTrim,
-        extra: extra.trim(),
-        boost: !!boost,
-      };
-
-      const r = await fetch(ENDPOINTS.generate, {
+      const { res, data } = await fetchJsonTry(ENDPOINTS.generate, {
         method: "POST",
-        headers,
-        body: JSON.stringify(payload),
+        headers: headersWithIds(uid, acc, apiKey.trim()),
+        body: JSON.stringify({
+          useCase,
+          tone,
+          topic,
+          extra,
+          outLang,
+          boost,
+        }),
       });
 
-      const data = await r.json().catch(() => ({} as any));
-
-      // Minimum UX time
-      const min = isPro ? MIN_GEN_PRO_MS : MIN_GEN_FREE_MS;
-      const elapsed = Date.now() - started;
-      if (elapsed < min) await sleep(min - elapsed);
-
-      if (!r.ok) {
-        const code = String(data?.error || "generate_error");
-        const msg = String(data?.message || "");
-
-        if (code === "quota_reached" && !isPro) setShowProModal(true);
-
-        setError(msg || code);
-        return;
+      if (!res.ok) {
+        const err = String((data as any)?.error || `gen_${res.status}`);
+        throw new Error(err);
       }
 
-      const text = pickOutput(data);
-      if (!text) {
-        setError("no_text");
-        return;
-      }
-
+      const text = String((data as any)?.output || (data as any)?.text || "");
       setOutput(text);
-      refreshMe();
 
-      const entry: HistoryEntry = {
-        id: `h_${safeId()}`,
+      const newPlan = String((data as any)?.plan || plan) as Plan;
+      if (newPlan === "FREE" || newPlan === "PRO") {
+        setPlan(newPlan);
+        safeSet(PLAN_STORAGE_KEY, newPlan);
+      }
+
+      // accept both shapes
+      const usageFromGen = (data as any)?.usage;
+      if (usageFromGen) setUsed(pickUsed(usageFromGen));
+
+      const limitsFromGen = (data as any)?.limits;
+      if (limitsFromGen)
+        setLimits(pickLimits(limitsFromGen, limits.free, limits.pro));
+
+      pushHistory({
+        id: randomId("h"),
         timestamp: Date.now(),
         useCase,
         tone,
+        topic,
+        extra,
         outLang,
-        topic: topicTrim,
-        extra: extra.trim(),
-        boost: !!boost,
+        boost,
         result: text,
-        meta: {
-          model: data?.meta?.model,
-          tokens: data?.meta?.tokens,
-          boost: data?.meta?.boost,
-          plan: data?.meta?.plan,
-          isBYOK: data?.meta?.isBYOK,
-          usingServerKey: data?.meta?.usingServerKey,
-          requestId: data?.meta?.requestId,
-          buildTag: data?.meta?.buildTag,
-        },
-      };
-
-      setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY));
-    } catch {
-      setError("network_error");
+      });
+    } catch (e: any) {
+      setError(String(e?.message || "generate_failed"));
     } finally {
       setIsGenerating(false);
     }
   }
 
-  /* -------------------------
-     Copy helpers
-  -------------------------- */
-  async function copyText(text: string) {
+  async function copyOutput() {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopyState("copied");
-      setTimeout(() => setCopyState("idle"), 1200);
+      await navigator.clipboard.writeText(output || "");
+      showToast(t.copied);
     } catch {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        setCopyState("copied");
-        setTimeout(() => setCopyState("idle"), 1200);
-      } catch {}
+      outputRef.current?.select();
+      document.execCommand("copy");
+      showToast(t.copied);
     }
   }
 
-  function clearHistory() {
-    setHistory([]);
-    try {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
-    } catch {}
-  }
-
-  const cancelLabel =
-    cancelAtPeriodEnd && currentPeriodEnd
-      ? uiLang === "de"
-        ? `${t.cancelScheduled} ${formatGermanDate(new Date(currentPeriodEnd))}`
-        : `${t.cancelScheduled} ${new Date(
-            currentPeriodEnd
-          ).toLocaleDateString()}`
-      : "";
-
-  const stripeOk =
-    stripeStatus === "active" ||
-    stripeStatus === "trialing" ||
-    stripeStatus === "past_due";
-
   /* =========================
-     Render
+     Styles
   ========================= */
 
+  const card: React.CSSProperties = {
+    border: "1px solid #202230",
+    borderRadius: 18,
+    background: "#0b0d14",
+    padding: 14,
+  };
+  const row: React.CSSProperties = {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+  };
+  const btn: React.CSSProperties = {
+    borderRadius: 14,
+    border: "1px solid #202230",
+    background: "#0f1118",
+    color: "#e7e7ff",
+    padding: "10px 12px",
+    cursor: "pointer",
+  };
+  const primaryBtn: React.CSSProperties = {
+    ...btn,
+    border: "1px solid #244d2f",
+    background: "rgba(20,83,45,.25)",
+    fontWeight: 900,
+  };
+  const input: React.CSSProperties = {
+    width: "100%",
+    borderRadius: 14,
+    border: "1px solid #202230",
+    background: "#0f1118",
+    color: "#e7e7ff",
+    padding: "10px 12px",
+    outline: "none",
+  };
+  const label: React.CSSProperties = {
+    fontSize: 12,
+    opacity: 0.85,
+    marginBottom: 6,
+  };
+
+  function pill(ok: boolean): React.CSSProperties {
+    return {
+      padding: "6px 10px",
+      borderRadius: 999,
+      border: "1px solid #202230",
+      background: ok ? "rgba(20,83,45,.18)" : "rgba(185,28,28,.14)",
+      fontSize: 12,
+      fontWeight: 700,
+    };
+  }
+
   return (
-    <div style={pageStyle}>
-      <div style={wrapStyle}>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#050608",
+        color: "#e7e7ff",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          width: "min(980px, 96vw)",
+          margin: "0 auto",
+          display: "grid",
+          gap: 12,
+        }}
+      >
         {/* Header */}
-        <div
-          style={{
-            ...cardStyle,
-            display: "flex",
-            gap: 12,
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{t.title}</div>
-            <div style={{ opacity: 0.75, marginTop: 4 }}>{t.subtitle}</div>
-
-            <div style={{ marginTop: 10, ...rowStyle }}>
-              <span style={pill(backendStatus === "ok")}>
-                {backendStatus === "ok"
-                  ? "✅"
-                  : backendStatus === "down"
-                  ? "❌"
-                  : "…"}{" "}
-                {t.backend}:{" "}
-                {backendStatus === "ok"
-                  ? "OK"
-                  : backendStatus === "down"
-                  ? "DOWN"
-                  : "…"}
-              </span>
-
-              <span style={pill(plan === "PRO")}>
-                {plan === "PRO" ? "👑" : "🆓"}{" "}
-                {plan === "PRO" ? t.planPro : t.planFree}
-              </span>
-
-              <span style={pill(!byokOnly)}>
-                {byokOnly ? "🔒" : "🔓"} {t.byok}:{" "}
-                {byokOnly ? "Only" : "Optional"}
-              </span>
-
-              {!!stripeStatus && (
-                <span style={pill(stripeOk)}>
-                  {t.stripeLabel}: {stripeStatus}
-                  {lastInvoiceStatus ? ` (${lastInvoiceStatus})` : ""}
-                </span>
+        <div style={card}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>{t.title}</div>
+              <div style={{ marginTop: 4, opacity: 0.85, fontSize: 13 }}>
+                {t.subtitle}
+              </div>
+              {!!cancelText && (
+                <div style={{ marginTop: 6, opacity: 0.9, fontSize: 12 }}>
+                  {cancelText}
+                </div>
               )}
-
-              {!!cancelLabel && (
-                <span style={pill(true)}>⏳ {cancelLabel}</span>
-              )}
-
-              {healthBuildTag ? (
-                <span style={{ ...pill(true), opacity: 0.85 }}>
-                  🏷️ {healthBuildTag}
-                </span>
-              ) : null}
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-              Models: BYOK={models.byok} · PRO={models.pro} · BOOST=
-              {models.boost} {healthModel ? `· ${healthModel}` : ""}
-            </div>
-          </div>
-
-          {/* UI / Output language toggles */}
-          <div style={{ display: "grid", gap: 10, justifyItems: "end" }}>
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={labelStyle}>{t.ui}</div>
-              <div style={toggleWrap}>
+            <div style={row}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  border: "1px solid #202230",
+                  borderRadius: 999,
+                  padding: 4,
+                }}
+              >
                 <button
-                  style={toggleBtn(uiLang === "de")}
+                  style={{
+                    ...btn,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background:
+                      uiLang === "de" ? "rgba(20,83,45,.25)" : "#0f1118",
+                    fontWeight: uiLang === "de" ? 900 : 600,
+                  }}
                   onClick={() => setUiLang("de")}
                   type="button"
                 >
                   DE
                 </button>
                 <button
-                  style={toggleBtn(uiLang === "en")}
+                  style={{
+                    ...btn,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background:
+                      uiLang === "en" ? "rgba(20,83,45,.25)" : "#0f1118",
+                    fontWeight: uiLang === "en" ? 900 : 600,
+                  }}
                   onClick={() => setUiLang("en")}
                   type="button"
                 >
@@ -1271,298 +1074,289 @@ export default function Page() {
                 </button>
               </div>
             </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={labelStyle}>{t.output}</div>
-              <div style={toggleWrap}>
-                <button
-                  style={toggleBtn(outLang === "de")}
-                  onClick={() => setOutLang("de")}
-                  type="button"
-                >
-                  {outLangLabel("de", uiLang)}
-                </button>
-                <button
-                  style={toggleBtn(outLang === "en")}
-                  onClick={() => setOutLang("en")}
-                  type="button"
-                >
-                  {outLangLabel("en", uiLang)}
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* Actions + Usage */}
-        <div style={cardStyle}>
-          <div style={rowStyle}>
-            <button
-              style={primaryBtnStyle}
-              onClick={openCheckout}
-              type="button"
-            >
+          <div style={{ marginTop: 10, ...row }}>
+            <span style={pill(backendStatus === "ok")}>
+              ● {t.backend}:{" "}
+              {backendStatus === "ok"
+                ? "OK"
+                : backendStatus === "down"
+                ? "DOWN"
+                : "…"}
+            </span>
+            <span style={pill(true)}>
+              ● {t.byok}: {byokOnly ? "BYOK-only" : "BYOK + PRO"}
+            </span>
+            <span style={pill(true)}>
+              ● {t.plan}: {isPro ? t.planPro : t.planFree}{" "}
+              {renewText ? `· ${renewText}` : ""}
+            </span>
+            {!!stripeExtra && (
+              <span style={pill(true)}>
+                ● {t.stripeLabel}: {stripeExtra}
+              </span>
+            )}
+          </div>
+
+          <div style={{ marginTop: 12, ...row }}>
+            <button style={primaryBtn} onClick={openCheckout} type="button">
               {t.checkoutOpen}
             </button>
-
-            <button style={btnStyle} onClick={openBillingPortal} type="button">
+            <button style={btn} onClick={openBillingPortal} type="button">
               {t.manage}
             </button>
-
-            <button style={btnStyle} onClick={() => refreshMe()} type="button">
+            <button style={btn} onClick={() => syncCheckout()} type="button">
               {t.sync}
             </button>
-
             <button
-              style={btnStyle}
+              style={btn}
               onClick={() => setShowRestoreModal(true)}
               type="button"
             >
               {t.restore}
             </button>
-
-            {SHOW_DEV ? (
+            {!isPro && (
               <button
-                style={btnStyle}
-                onClick={() => {
-                  setError("");
-                  setOutput("");
-                }}
+                style={btn}
+                onClick={() => setShowProModal(true)}
                 type="button"
               >
-                Clear UI
+                {t.getPro}
               </button>
-            ) : null}
+            )}
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              {used}/{limit} · {renewLabel || ""}
-            </div>
+          {!!error && (
             <div
               style={{
-                marginTop: 8,
-                height: 10,
-                borderRadius: 999,
-                border: "1px solid #202230",
-                overflow: "hidden",
-                background: "#0a0b10",
+                marginTop: 12,
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid #3b1d1d",
+                background: "rgba(185,28,28,.12)",
+                fontSize: 12,
+                whiteSpace: "pre-wrap",
               }}
             >
-              <div
-                style={{
-                  width: `${progress}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg,#1f2937,#16a34a)",
-                }}
-              />
+              {error}
             </div>
-          </div>
+          )}
 
-          {error ? (
-            <div style={{ marginTop: 10, color: "#ffb4a8", fontSize: 13 }}>
-              ❌ {error}
+          {!!toastMsg && (
+            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.95 }}>
+              {toastMsg}
             </div>
-          ) : null}
+          )}
         </div>
 
-        {/* BYOK Key */}
-        <div style={cardStyle}>
+        {/* API Key */}
+        <div style={card}>
           <div style={{ fontWeight: 900 }}>{t.apiKeyTitle}</div>
-
-          <div
-            style={{
-              marginTop: 10,
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
+          <div style={{ marginTop: 10 }}>
             <input
+              style={input}
+              type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-proj-…"
-              type={showKey ? "text" : "password"}
-              style={{ flex: 1, minWidth: 260, ...inputStyle }}
+              placeholder="sk-..."
             />
+          </div>
 
+          <div style={{ marginTop: 10, ...row }}>
             <button
+              style={btn}
+              onClick={() => setShowKey((s) => !s)}
               type="button"
-              onClick={() => setShowKey((v) => !v)}
-              style={miniBtnStyle}
             >
               {showKey ? t.hide : t.show}
             </button>
-
-            <button type="button" onClick={testKey} style={miniBtnStyle}>
+            <button style={btn} onClick={testKey} type="button">
               {t.test}
             </button>
+
+            {keyStatus !== "idle" && (
+              <span style={pill(keyStatus === "ok")}>
+                ● {keyStatus.toUpperCase()} {keyMsg ? `· ${keyMsg}` : ""}
+              </span>
+            )}
           </div>
 
-          {(keyStatus !== "idle" || keyMsg) && (
-            <div style={{ marginTop: 8, fontSize: 12, color: "#cfd2dc" }}>
-              {keyStatus === "ok" ? "✅ " : keyStatus === "bad" ? "❌ " : ""}
-              {keyMsg}
-            </div>
-          )}
-
-          {!apiKey.trim() && (
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 12,
-                color: byokOnly ? "#ffb4a8" : "#9ca0b4",
-              }}
-            >
-              {byokOnly ? t.keyHintByokOnly : t.keyHintNoKey}
-            </div>
-          )}
+          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+            {byokOnly ? t.keyHintByokOnly : t.keyHintNoKey}
+          </div>
         </div>
 
         {/* Generator */}
-        <form style={cardStyle} onSubmit={onGenerate}>
-          <div style={{ fontWeight: 900 }}>Generator</div>
+        <form style={card} onSubmit={onGenerate}>
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>Generator</div>
 
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          <div
+            style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}
+          >
             <div>
-              <div style={labelStyle}>{t.useCase}</div>
+              <div style={label}>{t.useCase}</div>
               <input
+                style={input}
                 value={useCase}
                 onChange={(e) => setUseCase(e.target.value)}
-                style={inputStyle}
               />
             </div>
 
             <div>
-              <div style={labelStyle}>{t.tone}</div>
+              <div style={label}>{t.tone}</div>
               <input
+                style={input}
                 value={tone}
                 onChange={(e) => setTone(e.target.value)}
-                style={inputStyle}
               />
             </div>
 
-            <div>
-              <div style={labelStyle}>{t.topic}</div>
-              <textarea
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={label}>{t.outputLang}</div>
+              <div style={{ ...row, gap: 6 }}>
+                <button
+                  type="button"
+                  style={{
+                    ...btn,
+                    padding: "8px 10px",
+                    background:
+                      outLang === "de" ? "rgba(20,83,45,.25)" : "#0f1118",
+                    fontWeight: outLang === "de" ? 900 : 600,
+                  }}
+                  onClick={() => setOutLang("de")}
+                >
+                  DE
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...btn,
+                    padding: "8px 10px",
+                    background:
+                      outLang === "en" ? "rgba(20,83,45,.25)" : "#0f1118",
+                    fontWeight: outLang === "en" ? 900 : 600,
+                  }}
+                  onClick={() => setOutLang("en")}
+                >
+                  EN
+                </button>
+              </div>
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={label}>{t.topic}</div>
+              <input
+                style={input}
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+                placeholder={
+                  uiLang === "de"
+                    ? "z.B. Produktlaunch, Angebot, Thema…"
+                    : "e.g. product launch, offer, topic…"
+                }
               />
             </div>
 
-            <div>
-              <div style={labelStyle}>{t.extra}</div>
-              <textarea
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={label}>{t.extra}</div>
+              <input
+                style={input}
                 value={extra}
                 onChange={(e) => setExtra(e.target.value)}
-                style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
+                placeholder={
+                  uiLang === "de"
+                    ? "z.B. Zielgruppe, Stil, CTA…"
+                    : "e.g. audience, style, CTA…"
+                }
               />
             </div>
+          </div>
 
-            <div
+          <div style={{ marginTop: 12, ...row }}>
+            <button
+              type="button"
               style={{
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-                flexWrap: "wrap",
+                ...btn,
+                border: boost ? "1px solid #244d2f" : "1px solid #202230",
+                background: boost ? "rgba(20,83,45,.22)" : "#0f1118",
+                fontWeight: boost ? 900 : 600,
               }}
+              onClick={() => setBoost((b) => !b)}
+              title={t.boostHint}
             >
-              <label
-                style={{
-                  display: "inline-flex",
-                  gap: 10,
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={boost}
-                  onChange={(e) => setBoost(e.target.checked)}
-                />
-                <span style={{ fontWeight: 800 }}>
-                  {t.boost}{" "}
-                  <span style={{ opacity: 0.75, fontWeight: 600 }}>
-                    ({t.boostHint})
-                  </span>
-                </span>
-              </label>
-            </div>
+              {t.boost}: {boost ? "ON" : "OFF"}
+            </button>
 
-            <div style={rowStyle}>
-              <button
-                type="submit"
-                style={primaryBtnStyle}
-                disabled={isGenerating}
-              >
-                {isGenerating ? t.generating : t.generate}
-              </button>
-            </div>
+            <button type="submit" style={primaryBtn} disabled={isGenerating}>
+              {isGenerating ? t.generating : t.generate}
+            </button>
+
+            <span style={{ opacity: 0.8, fontSize: 12 }}>
+              Model: {boost ? models.boost : isPro ? models.pro : models.byok}
+            </span>
+
+            <span style={{ opacity: 0.8, fontSize: 12 }}>
+              Usage: {used}/{limit} ({progress}%)
+            </span>
           </div>
         </form>
 
         {/* Output */}
-        <div style={cardStyle}>
+        <div style={card}>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
               gap: 10,
-              flexWrap: "wrap",
             }}
           >
             <div style={{ fontWeight: 900 }}>{t.outputTitle}</div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                type="button"
-                style={miniBtnStyle}
-                onClick={() => copyText(output)}
-                disabled={!output}
-              >
-                {copyState === "copied" ? t.copied : t.copy}
-              </button>
-            </div>
+            <button style={btn} onClick={copyOutput} type="button">
+              {t.copy}
+            </button>
           </div>
 
-          <div
+          <textarea
+            ref={outputRef}
             style={{
+              ...input,
               marginTop: 10,
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.45,
-              opacity: output ? 1 : 0.7,
+              minHeight: 160,
+              resize: "vertical",
             }}
-          >
-            {output || "…"}
-          </div>
+            value={output}
+            readOnly
+            placeholder={
+              uiLang === "de"
+                ? "Hier erscheint dein Output…"
+                : "Your output will appear here…"
+            }
+          />
         </div>
 
         {/* History */}
-        <div style={cardStyle}>
+        <div style={card}>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
               gap: 10,
-              flexWrap: "wrap",
             }}
           >
             <div style={{ fontWeight: 900 }}>{t.historyTitle}</div>
-            <button
-              type="button"
-              style={miniBtnStyle}
-              onClick={clearHistory}
-              disabled={!history.length}
-            >
+            <button style={btn} onClick={clearHistory} type="button">
               {t.clearHistory}
             </button>
           </div>
 
           <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
             {history.length === 0 ? (
-              <div style={{ opacity: 0.7, fontSize: 13 }}>—</div>
+              <div style={{ opacity: 0.75, fontSize: 12 }}>
+                {uiLang === "de" ? "Noch keine Einträge." : "No entries yet."}
+              </div>
             ) : (
               history.map((h) => (
                 <div
@@ -1571,55 +1365,30 @@ export default function Page() {
                     border: "1px solid #202230",
                     borderRadius: 14,
                     padding: 12,
-                    background: "#07080d",
+                    background: "#0f1118",
                   }}
                 >
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                    {new Date(h.timestamp).toLocaleString()} · {h.useCase} ·{" "}
+                    {h.tone} · {h.outLang.toUpperCase()} · Boost:{" "}
+                    {h.boost ? "ON" : "OFF"}
+                  </div>
+                  <div style={{ marginTop: 8, fontWeight: 900 }}>
+                    {h.topic || "(no topic)"}
+                  </div>
+                  {h.extra ? (
+                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+                      {h.extra}
+                    </div>
+                  ) : null}
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div style={{ fontWeight: 800 }}>
-                      {new Date(h.timestamp).toLocaleString()} · {h.useCase} ·{" "}
-                      {h.tone} · {outLangLabel(h.outLang, uiLang)} ·{" "}
-                      {h.boost ? "BOOST" : "—"}
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        type="button"
-                        style={miniBtnStyle}
-                        onClick={() => copyText(h.result)}
-                      >
-                        {t.copy}
-                      </button>
-                      <button
-                        type="button"
-                        style={miniBtnStyle}
-                        onClick={() => setOutput(h.result)}
-                      >
-                        Load
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 8, fontSize: 13, opacity: 0.85 }}>
-                    <div style={{ opacity: 0.85, fontWeight: 700 }}>Topic</div>
-                    <div style={{ whiteSpace: "pre-wrap" }}>{h.topic}</div>
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 13,
-                      opacity: 0.92,
+                      marginTop: 10,
                       whiteSpace: "pre-wrap",
+                      lineHeight: 1.45,
                     }}
                   >
-                    {h.result.slice(0, 450)}
-                    {h.result.length > 450 ? "…" : ""}
+                    {h.result}
                   </div>
                 </div>
               ))
@@ -1628,192 +1397,119 @@ export default function Page() {
         </div>
       </div>
 
-      {/* PRO Modal */}
-      {showProModal ? (
-        <div style={modalOverlay} onClick={() => setShowProModal(false)}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>{t.proModalTitle}</div>
-              <button
-                style={miniBtnStyle}
-                type="button"
-                onClick={() => setShowProModal(false)}
-              >
-                {t.close}
-              </button>
-            </div>
-
-            <div
-              style={{ marginTop: 10, whiteSpace: "pre-wrap", opacity: 0.9 }}
-            >
-              {t.proModalText}
-            </div>
-
-            <div
-              style={{
-                marginTop: 12,
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                style={btnStyle}
-                type="button"
-                onClick={() => setShowProModal(false)}
-              >
-                {t.later}
-              </button>
-              <button
-                style={primaryBtnStyle}
-                type="button"
-                onClick={openCheckout}
-              >
-                {t.getPro}
-              </button>
-            </div>
+      {/* Modals */}
+      {showProModal && (
+        <Modal
+          title={t.proModalTitle}
+          onClose={() => setShowProModal(false)}
+          closeLabel={t.close}
+        >
+          <div
+            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
+          >
+            {t.proModalText}
           </div>
-        </div>
-      ) : null}
-
-      {/* Restore Modal */}
-      {showRestoreModal ? (
-        <div style={modalOverlay} onClick={() => setShowRestoreModal(false)}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
+          <div
+            style={{
+              marginTop: 14,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              style={btn}
+              onClick={() => setShowProModal(false)}
+              type="button"
             >
-              <div style={{ fontWeight: 900 }}>{t.restoreTitle}</div>
-              <button
-                style={miniBtnStyle}
-                type="button"
-                onClick={() => setShowRestoreModal(false)}
-              >
-                {t.close}
-              </button>
-            </div>
-
-            <div
-              style={{ marginTop: 10, whiteSpace: "pre-wrap", opacity: 0.9 }}
-            >
-              {t.restoreText}
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <div style={labelStyle}>{t.sessionIdLabel}</div>
-              <input
-                value={restoreSessionId}
-                onChange={(e) => setRestoreSessionId(e.target.value)}
-                placeholder="cs_test_..."
-                style={inputStyle}
-              />
-              {lastSessionId ? (
-                <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
-                  Last sessionId:{" "}
-                  <button
-                    type="button"
-                    style={{ ...miniBtnStyle, padding: "6px 10px" }}
-                    onClick={() => setRestoreSessionId(lastSessionId)}
-                  >
-                    Use saved
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            <div
-              style={{
-                marginTop: 12,
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                style={btnStyle}
-                type="button"
-                onClick={() => syncBySessionId(restoreSessionId)}
-              >
-                {t.restoreSync}
-              </button>
-              <button
-                style={primaryBtnStyle}
-                type="button"
-                onClick={openCheckout}
-              >
-                {t.restoreCheckout}
-              </button>
-            </div>
+              {t.later}
+            </button>
+            <button style={primaryBtn} onClick={openCheckout} type="button">
+              {t.getPro}
+            </button>
           </div>
-        </div>
-      ) : null}
+        </Modal>
+      )}
 
-      {/* Missing IDs Modal */}
-      {showMissingIdsModal ? (
-        <div style={modalOverlay} onClick={() => setShowMissingIdsModal(false)}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>{t.missingIdsTitle}</div>
-              <button
-                style={miniBtnStyle}
-                type="button"
-                onClick={() => setShowMissingIdsModal(false)}
-              >
-                {t.close}
-              </button>
-            </div>
-
-            <div
-              style={{ marginTop: 10, opacity: 0.9, whiteSpace: "pre-wrap" }}
-            >
-              {t.missingIdsText}
-            </div>
-
-            <div
-              style={{
-                marginTop: 12,
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                style={btnStyle}
-                type="button"
-                onClick={() => setShowMissingIdsModal(false)}
-              >
-                {t.ok}
-              </button>
-              <button
-                style={primaryBtnStyle}
-                type="button"
-                onClick={() => {
-                  setShowMissingIdsModal(false);
-                  setShowRestoreModal(true);
-                }}
-              >
-                {t.restore}
-              </button>
-            </div>
+      {showRestoreModal && (
+        <Modal
+          title={t.restoreTitle}
+          onClose={() => setShowRestoreModal(false)}
+          closeLabel={t.close}
+        >
+          <div
+            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
+          >
+            {t.restoreText}
           </div>
-        </div>
-      ) : null}
-    </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={label}>{t.sessionIdLabel}</div>
+            <input
+              style={input}
+              value={restoreSessionId}
+              onChange={(e) => setRestoreSessionId(e.target.value)}
+              placeholder="cs_live_... / cs_test_..."
+            />
+          </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              style={btn}
+              onClick={() => syncCheckout(restoreSessionId)}
+              type="button"
+            >
+              {t.restoreSync}
+            </button>
+            <button style={primaryBtn} onClick={openCheckout} type="button">
+              {t.restoreCheckout}
+            </button>
+          </div>
+
+          {!!lastSessionId && (
+            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
+              last session_id: {lastSessionId}
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {showMissingIdsModal && (
+        <Modal
+          title={t.missingIdsTitle}
+          onClose={() => setShowMissingIdsModal(false)}
+          closeLabel={t.close}
+        >
+          <div
+            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
+          >
+            {t.missingIdsText}
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              style={primaryBtn}
+              onClick={() => setShowMissingIdsModal(false)}
+              type="button"
+            >
+              {t.ok}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </main>
   );
 }
