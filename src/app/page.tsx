@@ -1,3 +1,12 @@
+// app/page.tsx — GLE Prompt Studio Frontend (FINAL)
+// - Dropdowns for Use Case + Tone (with optional custom fields)
+// - DE/EN UI + DE/EN output language
+// - BYOK key storage + Test
+// - Checkout + Billing Portal + Sync (session_id) + Restore modal
+// - Usage + limits + models from /api/health + /api/me
+// - History (localStorage) + Copy output
+// - Auto-capture ?session_id=... from URL (no console noise)
+
 "use client";
 
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +29,7 @@ const ENDPOINTS = {
   sync: `${API_BASE}/api/sync-checkout-session`,
 
   billingPortal: `${API_BASE}/api/billing-portal`,
-  billingPortalFallback: `${API_BASE}/api/create-portal-session`, // optional alias on some deploys
+  billingPortalFallback: `${API_BASE}/api/create-portal-session`,
 } as const;
 
 /* =========================
@@ -35,6 +44,12 @@ const OUT_LANG_KEY = "gle_out_lang_v1";
 const PLAN_STORAGE_KEY = "gle_plan_v1";
 const HISTORY_STORAGE_KEY = "gle_history_v1";
 const LAST_SESSION_ID_KEY = "gle_last_checkout_session_id_v1";
+
+// NEW: dropdown persistence
+const USECASE_KEY_KEY = "gle_usecase_key_v1";
+const USECASE_CUSTOM_KEY = "gle_usecase_custom_v1";
+const TONE_KEY_KEY = "gle_tone_key_v1";
+const TONE_CUSTOM_KEY = "gle_tone_custom_v1";
 
 const MAX_HISTORY = 10;
 
@@ -63,7 +78,6 @@ type MeResp = {
   ok?: boolean;
   plan?: Plan;
 
-  // can be ms or seconds or absent
   renewAt?: number;
   cancelAt?: number;
 
@@ -71,7 +85,7 @@ type MeResp = {
     mode?: string;
     customerId?: string;
     subscriptionId?: string;
-    hasCustomerId?: boolean; // seen in your output
+    hasCustomerId?: boolean;
   };
 
   usage?: {
@@ -98,6 +112,82 @@ type HistoryEntry = {
   boost: boolean;
   result: string;
 };
+
+type Opt = { key: string; label: { de: string; en: string } };
+
+/* =========================
+   Dropdown Options
+========================= */
+
+const USE_CASES: Opt[] = [
+  {
+    key: "social_media_post",
+    label: { de: "Social Media Post", en: "Social media post" },
+  },
+  { key: "linkedin_post", label: { de: "LinkedIn Post", en: "LinkedIn post" } },
+  { key: "blog_article", label: { de: "Blog-Artikel", en: "Blog article" } },
+  {
+    key: "product_description",
+    label: { de: "Produktbeschreibung", en: "Product description" },
+  },
+  {
+    key: "newsletter",
+    label: { de: "Newsletter / E-Mail", en: "Newsletter / email" },
+  },
+  {
+    key: "landingpage",
+    label: {
+      de: "Landingpage / Website-Text",
+      en: "Landing page / website copy",
+    },
+  },
+  {
+    key: "ad_copy",
+    label: { de: "Werbeanzeige (Meta/Google)", en: "Ad copy (Meta/Google)" },
+  },
+  {
+    key: "video_script",
+    label: {
+      de: "Video Script (Reels/TikTok/YouTube)",
+      en: "Video script (Reels/TikTok/YouTube)",
+    },
+  },
+  {
+    key: "seo_meta",
+    label: {
+      de: "SEO Meta Title + Description",
+      en: "SEO meta title + description",
+    },
+  },
+  {
+    key: "hook_headlines",
+    label: { de: "Hooks / Headlines", en: "Hooks / headlines" },
+  },
+  {
+    key: "offer_outline",
+    label: { de: "Angebot / Sales-Outline", en: "Offer / sales outline" },
+  },
+  { key: "custom", label: { de: "Eigener…", en: "Custom…" } },
+];
+
+const TONES: Opt[] = [
+  { key: "neutral", label: { de: "Neutral", en: "Neutral" } },
+  { key: "friendly", label: { de: "Freundlich", en: "Friendly" } },
+  { key: "professional", label: { de: "Professionell", en: "Professional" } },
+  { key: "casual", label: { de: "Locker", en: "Casual" } },
+  { key: "persuasive", label: { de: "Überzeugend", en: "Persuasive" } },
+  { key: "emotional", label: { de: "Emotional", en: "Emotional" } },
+  { key: "humorous", label: { de: "Humorvoll", en: "Humorous" } },
+  { key: "authoritative", label: { de: "Autoritativ", en: "Authoritative" } },
+  { key: "direct", label: { de: "Direkt / Kurz", en: "Direct / concise" } },
+  { key: "storytelling", label: { de: "Storytelling", en: "Storytelling" } },
+  { key: "custom", label: { de: "Eigener…", en: "Custom…" } },
+];
+
+function optLabel(opts: Opt[], key: string, lang: OutLang) {
+  const hit = opts.find((o) => o.key === key);
+  return (hit ? hit.label[lang] : "") || "";
+}
 
 /* =========================
    i18n
@@ -131,6 +221,9 @@ const TXT: Record<
     topic: string;
     extra: string;
     outputLang: string;
+
+    customUseCase: string;
+    customTone: string;
 
     boost: string;
     boostHint: string;
@@ -173,6 +266,9 @@ const TXT: Record<
 
     noKeySet: string;
     portalNeedsCustomer: string;
+
+    pickValue: string;
+    customMissing: string;
   }
 > = {
   de: {
@@ -205,6 +301,9 @@ const TXT: Record<
     extra: "Extra Hinweise (z.B. „3 Varianten, Hook + CTA“)",
     outputLang: "Output-Sprache",
 
+    customUseCase: "Eigener Anwendungsfall",
+    customTone: "Eigener Ton",
+
     boost: "Quality Boost",
     boostHint: "Mehr Tiefe & Qualität",
 
@@ -221,7 +320,7 @@ const TXT: Record<
     planFree: "FREE",
     planPro: "PRO",
     resetOn: "Reset am",
-    cancelScheduled: "Kündigung vorgemerkt bis",
+    cancelScheduled: "gekündigt zum",
 
     proModalTitle: "GLE PRO",
     proModalText:
@@ -250,6 +349,9 @@ const TXT: Record<
     noKeySet: "Kein Key gesetzt.",
     portalNeedsCustomer:
       "Stripe Customer fehlt (missing_customer_id). → Bitte einmal Checkout starten ODER per session_id syncen.",
+
+    pickValue: "Bitte auswählen…",
+    customMissing: "Bitte fülle das Feld „Eigener …“ aus.",
   },
   en: {
     title: "GLE Prompt Studio",
@@ -281,6 +383,9 @@ const TXT: Record<
     extra: "Extra notes (e.g. “3 variants, hook + CTA”)",
     outputLang: "Output language",
 
+    customUseCase: "Custom use case",
+    customTone: "Custom tone",
+
     boost: "Quality Boost",
     boostHint: "More depth & quality",
 
@@ -297,7 +402,7 @@ const TXT: Record<
     planFree: "FREE",
     planPro: "PRO",
     resetOn: "Resets on",
-    cancelScheduled: "Cancel scheduled for",
+    cancelScheduled: "cancels on",
 
     proModalTitle: "GLE PRO",
     proModalText:
@@ -326,6 +431,9 @@ const TXT: Record<
     noKeySet: "No key set.",
     portalNeedsCustomer:
       "Stripe customer missing (missing_customer_id). → Start checkout once OR sync via session_id.",
+
+    pickValue: "Please choose…",
+    customMissing: "Please fill the “Custom …” field.",
   },
 };
 
@@ -368,7 +476,6 @@ function randomId(prefix: string) {
 
 function normalizeTs(ts?: number) {
   if (!ts) return 0;
-  // if seconds (10 digits) -> convert to ms
   return ts < 1_000_000_000_000 ? ts * 1000 : ts;
 }
 
@@ -507,7 +614,6 @@ function Modal({
 ========================= */
 
 export default function Page() {
-  // prefs
   const [uiLang, setUiLang] = useState<UiLang>("de");
   const [outLang, setOutLang] = useState<OutLang>("de");
   const t = TXT[uiLang];
@@ -539,9 +645,12 @@ export default function Page() {
   const [keyStatus, setKeyStatus] = useState<"idle" | "ok" | "bad">("idle");
   const [keyMsg, setKeyMsg] = useState("");
 
-  // generator inputs
-  const [useCase, setUseCase] = useState("Social Media Post");
-  const [tone, setTone] = useState("Neutral");
+  // generator inputs (dropdown)
+  const [useCaseKey, setUseCaseKey] = useState<string>("social_media_post");
+  const [useCaseCustom, setUseCaseCustom] = useState<string>("");
+  const [toneKey, setToneKey] = useState<string>("neutral");
+  const [toneCustom, setToneCustom] = useState<string>("");
+
   const [topic, setTopic] = useState("");
   const [extra, setExtra] = useState("");
   const [boost, setBoost] = useState(false);
@@ -690,6 +799,17 @@ export default function Page() {
     const ls = safeGet(LAST_SESSION_ID_KEY).trim();
     if (ls) setLastSessionId(ls);
 
+    // NEW: restore dropdown selections
+    const ucKey = safeGet(USECASE_KEY_KEY).trim();
+    const ucCustom = safeGet(USECASE_CUSTOM_KEY);
+    const tKey = safeGet(TONE_KEY_KEY).trim();
+    const tCustom = safeGet(TONE_CUSTOM_KEY);
+
+    if (ucKey) setUseCaseKey(ucKey);
+    if (ucCustom) setUseCaseCustom(ucCustom);
+    if (tKey) setToneKey(tKey);
+    if (tCustom) setToneCustom(tCustom);
+
     try {
       const raw = safeGet(HISTORY_STORAGE_KEY);
       const parsed = raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
@@ -705,6 +825,12 @@ export default function Page() {
   useEffect(() => safeSet(UI_LANG_KEY, uiLang), [uiLang]);
   useEffect(() => safeSet(OUT_LANG_KEY, outLang), [outLang]);
   useEffect(() => safeSet(APIKEY_STORAGE_KEY, apiKey.trim()), [apiKey]);
+
+  // persist dropdowns
+  useEffect(() => safeSet(USECASE_KEY_KEY, useCaseKey), [useCaseKey]);
+  useEffect(() => safeSet(USECASE_CUSTOM_KEY, useCaseCustom), [useCaseCustom]);
+  useEffect(() => safeSet(TONE_KEY_KEY, toneKey), [toneKey]);
+  useEffect(() => safeSet(TONE_CUSTOM_KEY, toneCustom), [toneCustom]);
 
   function pushHistory(entry: HistoryEntry) {
     const next = [entry, ...history].slice(0, MAX_HISTORY);
@@ -849,10 +975,6 @@ export default function Page() {
         body: JSON.stringify({ sessionId, userId: uid, accountId: acc }),
       });
 
-      if (res.status === 404) {
-        showToast(`Sync 404 → ${ENDPOINTS.sync}`);
-        return;
-      }
       if (!res.ok)
         throw new Error(String((data as any)?.error || `sync_${res.status}`));
 
@@ -871,6 +993,24 @@ export default function Page() {
     setError("");
 
     const { uid, acc } = ensureIds();
+
+    const useCase =
+      useCaseKey === "custom"
+        ? useCaseCustom.trim()
+        : optLabel(USE_CASES, useCaseKey, outLang);
+    const tone =
+      toneKey === "custom"
+        ? toneCustom.trim()
+        : optLabel(TONES, toneKey, outLang);
+
+    if (useCaseKey === "custom" && !useCase) {
+      setError(t.customMissing);
+      return;
+    }
+    if (toneKey === "custom" && !tone) {
+      setError(t.customMissing);
+      return;
+    }
 
     try {
       setIsGenerating(true);
@@ -902,7 +1042,6 @@ export default function Page() {
         safeSet(PLAN_STORAGE_KEY, newPlan);
       }
 
-      // accept both shapes
       const usageFromGen = (data as any)?.usage;
       if (usageFromGen) setUsed(pickUsed(usageFromGen));
 
@@ -993,6 +1132,55 @@ export default function Page() {
       fontSize: 12,
       fontWeight: 700,
     };
+  }
+
+  function SelectBox({
+    value,
+    onChange,
+    options,
+    dataAttr,
+  }: {
+    value: string;
+    onChange: (v: string) => void;
+    options: Opt[];
+    dataAttr: string;
+  }) {
+    return (
+      <div style={{ position: "relative" }}>
+        <select
+          data-gle={dataAttr}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            ...input,
+            appearance: "none",
+            WebkitAppearance: "none",
+            MozAppearance: "none",
+            paddingRight: 36,
+            cursor: "pointer",
+          }}
+        >
+          {options.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.label[outLang]}
+            </option>
+          ))}
+        </select>
+        <span
+          style={{
+            position: "absolute",
+            right: 12,
+            top: "50%",
+            transform: "translateY(-50%)",
+            pointerEvents: "none",
+            opacity: 0.65,
+            fontSize: 14,
+          }}
+        >
+          ▾
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -1196,20 +1384,50 @@ export default function Page() {
           >
             <div>
               <div style={label}>{t.useCase}</div>
-              <input
-                style={input}
-                value={useCase}
-                onChange={(e) => setUseCase(e.target.value)}
+              <SelectBox
+                value={useCaseKey}
+                onChange={setUseCaseKey}
+                options={USE_CASES}
+                dataAttr="usecase"
               />
+              {useCaseKey === "custom" && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={label}>{t.customUseCase}</div>
+                  <input
+                    style={input}
+                    value={useCaseCustom}
+                    onChange={(e) => setUseCaseCustom(e.target.value)}
+                    placeholder={
+                      uiLang === "de"
+                        ? "z.B. Webinar-Skript"
+                        : "e.g. webinar script"
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div>
               <div style={label}>{t.tone}</div>
-              <input
-                style={input}
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
+              <SelectBox
+                value={toneKey}
+                onChange={setToneKey}
+                options={TONES}
+                dataAttr="tone"
               />
+              {toneKey === "custom" && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={label}>{t.customTone}</div>
+                  <input
+                    style={input}
+                    value={toneCustom}
+                    onChange={(e) => setToneCustom(e.target.value)}
+                    placeholder={
+                      uiLang === "de" ? "z.B. frech, edgy" : "e.g. bold, edgy"
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
