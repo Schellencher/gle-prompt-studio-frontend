@@ -1,550 +1,318 @@
-// app/page.tsx — GLE Prompt Studio Frontend (FINAL)
-// - Dropdowns for Use Case + Tone (with optional custom fields)
-// - DE/EN UI + DE/EN output language
-// - BYOK key storage + Test
-// - Checkout + Billing Portal + Sync (session_id) + Restore modal
-// - Usage + limits + models from /api/health + /api/me
-// - History (localStorage) + Copy output
-// - Auto-capture ?session_id=... from URL (no console noise)
-
 "use client";
 
-import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-/* =========================
-   Config
-========================= */
+/**
+ * GLE Prompt Studio — src/app/page.tsx (CLEAN, COMPLETE)
+ * Features:
+ * - Real dropdowns for Use Case + Tone (with optional custom inputs)
+ * - BYOK key (show/hide + test) stored locally
+ * - AccountId/UserId stored locally (restore supported)
+ * - /api/health + /api/me status (plan, renewAt, cancelAt, usage/limits)
+ * - Generate (BYOK or PRO server) + Boost toggle
+ * - History + Copy + Clear
+ * - PRO modal with Checkout + Sync
+ * - Billing portal (Manage subscription)
+ * - MAINTENANCE billing lock via NEXT_PUBLIC_MAINTENANCE_MODE (UI disables billing)
+ *
+ * ENV (Vercel):
+ * - NEXT_PUBLIC_BACKEND_URL=https://gle-prompt-studio-backend-1.onrender.com
+ * - NEXT_PUBLIC_MAINTENANCE_MODE=0|1   (only locks billing buttons in UI)
+ */
 
-const API_BASE = String(process.env.NEXT_PUBLIC_API_BASE || "").trim()
-  ? String(process.env.NEXT_PUBLIC_API_BASE).trim()
-  : "https://gle-prompt-studio-backend-1.onrender.com";
+const BACKEND =
+  (process.env.NEXT_PUBLIC_BACKEND_URL || "").trim().replace(/\/$/, "") ||
+  "https://gle-prompt-studio-backend-1.onrender.com";
 
-const ENDPOINTS = {
-  health: `${API_BASE}/api/health`,
-  me: `${API_BASE}/api/me`,
-  testKey: `${API_BASE}/api/test`,
+const MAINTENANCE_BILLING_OFF =
+  String(process.env.NEXT_PUBLIC_MAINTENANCE_MODE || "0").trim() === "1";
 
-  checkout: `${API_BASE}/api/create-checkout-session`,
-  generate: `${API_BASE}/api/generate`,
-  sync: `${API_BASE}/api/sync-checkout-session`,
-
-  billingPortal: `${API_BASE}/api/billing-portal`,
-  billingPortalFallback: `${API_BASE}/api/create-portal-session`,
-} as const;
-
-/* =========================
-   Storage Keys
-========================= */
-
-const USER_ID_KEY = "gle_user_id_v1";
-const ACCOUNT_ID_KEY = "gle_account_id_v1";
-const APIKEY_STORAGE_KEY = "gle_api_key_v1";
-const UI_LANG_KEY = "gle_ui_lang_v1";
-const OUT_LANG_KEY = "gle_out_lang_v1";
-const PLAN_STORAGE_KEY = "gle_plan_v1";
-const HISTORY_STORAGE_KEY = "gle_history_v1";
-const LAST_SESSION_ID_KEY = "gle_last_checkout_session_id_v1";
-
-// NEW: dropdown persistence
-const USECASE_KEY_KEY = "gle_usecase_key_v1";
-const USECASE_CUSTOM_KEY = "gle_usecase_custom_v1";
-const TONE_KEY_KEY = "gle_tone_key_v1";
-const TONE_CUSTOM_KEY = "gle_tone_custom_v1";
-
-const MAX_HISTORY = 10;
-
-/* =========================
-   Types
-========================= */
-
-type UiLang = "de" | "en";
-type OutLang = "de" | "en";
-type Plan = "FREE" | "PRO";
-type BackendStatus = "unknown" | "ok" | "down";
-
-type Health = {
-  status?: string;
-  byokOnly?: boolean;
-  stripe?: boolean;
-  stripeMode?: string;
-  stripePriceId?: string;
-  models?: { byok?: string; pro?: string; boost?: string };
-  limits?:
-    | { free?: number; pro?: number }
-    | { FREE_LIMIT?: number; PRO_LIMIT?: number };
+const LS = {
+  userId: "gle_user_id_v1",
+  accountId: "gle_account_id_v1",
+  byok: "gle_openai_byok_key_v1",
+  history: "gle_history_v1",
+  bypass: "gle_bypass_active",
 };
 
-type MeResp = {
-  ok?: boolean;
-  plan?: Plan;
+type Plan = "FREE" | "PRO";
 
-  renewAt?: number;
-  cancelAt?: number;
-
+type ApiMe = {
+  ok: boolean;
+  plan: Plan;
+  renewAt: number;
+  cancelAt: number;
   stripe?: {
     mode?: string;
     customerId?: string;
     subscriptionId?: string;
     hasCustomerId?: boolean;
+    status?: string;
+    cancelAtPeriodEnd?: boolean;
   };
-
   usage?: {
-    used?: number;
-    count?: number;
-    tokens?: number;
-    lastTs?: number;
-    monthKey?: string;
+    used: number;
+    lastTs: number;
+    monthKey: string;
+    boostUsed: number;
   };
-
-  limits?:
-    | { free?: number; pro?: number }
-    | { FREE_LIMIT?: number; PRO_LIMIT?: number };
+  limits?: { FREE_LIMIT: number; PRO_LIMIT: number; PRO_BOOST_LIMIT: number };
 };
 
-type HistoryEntry = {
-  id: string;
-  timestamp: number;
+type GenResp =
+  | {
+      ok: true;
+      output: string;
+      plan: Plan;
+      mode: string;
+      usage: {
+        used: number;
+        lastTs: number;
+        monthKey: string;
+        boostUsed: number;
+      };
+      limits: {
+        FREE_LIMIT: number;
+        PRO_LIMIT: number;
+        PRO_BOOST_LIMIT: number;
+      };
+      renewAt: number;
+      cancelAt: number;
+    }
+  | {
+      ok: false;
+      error: string;
+      message?: string;
+      used?: number;
+      limit?: number;
+      renewAt?: number;
+      boostUsed?: number;
+      boostLimit?: number;
+      trial?: any;
+    };
+
+type HistoryItem = {
+  ts: number;
   useCase: string;
   tone: string;
   topic: string;
-  extra: string;
-  outLang: OutLang;
+  outLang: "de" | "en";
   boost: boolean;
-  result: string;
+  output: string;
 };
 
-type Opt = { key: string; label: { de: string; en: string } };
-
-/* =========================
-   Dropdown Options
-========================= */
-
-const USE_CASES: Opt[] = [
-  {
-    key: "social_media_post",
-    label: { de: "Social Media Post", en: "Social media post" },
-  },
-  { key: "linkedin_post", label: { de: "LinkedIn Post", en: "LinkedIn post" } },
-  { key: "blog_article", label: { de: "Blog-Artikel", en: "Blog article" } },
-  {
-    key: "product_description",
-    label: { de: "Produktbeschreibung", en: "Product description" },
-  },
-  {
-    key: "newsletter",
-    label: { de: "Newsletter / E-Mail", en: "Newsletter / email" },
-  },
-  {
-    key: "landingpage",
-    label: {
-      de: "Landingpage / Website-Text",
-      en: "Landing page / website copy",
-    },
-  },
-  {
-    key: "ad_copy",
-    label: { de: "Werbeanzeige (Meta/Google)", en: "Ad copy (Meta/Google)" },
-  },
-  {
-    key: "video_script",
-    label: {
-      de: "Video Script (Reels/TikTok/YouTube)",
-      en: "Video script (Reels/TikTok/YouTube)",
-    },
-  },
-  {
-    key: "seo_meta",
-    label: {
-      de: "SEO Meta Title + Description",
-      en: "SEO meta title + description",
-    },
-  },
-  {
-    key: "hook_headlines",
-    label: { de: "Hooks / Headlines", en: "Hooks / headlines" },
-  },
-  {
-    key: "offer_outline",
-    label: { de: "Angebot / Sales-Outline", en: "Offer / sales outline" },
-  },
-  { key: "custom", label: { de: "Eigener…", en: "Custom…" } },
-];
-
-const TONES: Opt[] = [
-  { key: "neutral", label: { de: "Neutral", en: "Neutral" } },
-  { key: "friendly", label: { de: "Freundlich", en: "Friendly" } },
-  { key: "professional", label: { de: "Professionell", en: "Professional" } },
-  { key: "casual", label: { de: "Locker", en: "Casual" } },
-  { key: "persuasive", label: { de: "Überzeugend", en: "Persuasive" } },
-  { key: "emotional", label: { de: "Emotional", en: "Emotional" } },
-  { key: "humorous", label: { de: "Humorvoll", en: "Humorous" } },
-  { key: "authoritative", label: { de: "Autoritativ", en: "Authoritative" } },
-  { key: "direct", label: { de: "Direkt / Kurz", en: "Direct / concise" } },
-  { key: "storytelling", label: { de: "Storytelling", en: "Storytelling" } },
-  { key: "custom", label: { de: "Eigener…", en: "Custom…" } },
-];
-
-function optLabel(opts: Opt[], key: string, lang: OutLang) {
-  const hit = opts.find((o) => o.key === key);
-  return (hit ? hit.label[lang] : "") || "";
+function now() {
+  return Date.now();
 }
 
-/* =========================
-   i18n
-========================= */
-
-const TXT: Record<
-  UiLang,
-  {
-    title: string;
-    subtitle: string;
-
-    backend: string;
-    byok: string;
-    plan: string;
-    stripeLabel: string;
-
-    checkoutOpen: string;
-    manage: string;
-    sync: string;
-    restore: string;
-
-    apiKeyTitle: string;
-    show: string;
-    hide: string;
-    test: string;
-    keyHintByokOnly: string;
-    keyHintNoKey: string;
-
-    useCase: string;
-    tone: string;
-    topic: string;
-    extra: string;
-    outputLang: string;
-
-    customUseCase: string;
-    customTone: string;
-
-    boost: string;
-    boostHint: string;
-
-    generate: string;
-    generating: string;
-
-    outputTitle: string;
-    historyTitle: string;
-
-    copy: string;
-    copied: string;
-    clearHistory: string;
-
-    planFree: string;
-    planPro: string;
-    resetOn: string;
-    cancelScheduled: string;
-
-    proModalTitle: string;
-    proModalText: string;
-    later: string;
-    getPro: string;
-
-    restoreTitle: string;
-    restoreText: string;
-    sessionIdLabel: string;
-    restoreSync: string;
-    restoreCheckout: string;
-
-    missingIdsTitle: string;
-    missingIdsText: string;
-
-    ok: string;
-    close: string;
-
-    portalError: string;
-    missingSession: string;
-    synced: string;
-
-    noKeySet: string;
-    portalNeedsCustomer: string;
-
-    pickValue: string;
-    customMissing: string;
-  }
-> = {
-  de: {
-    title: "GLE Prompt Studio",
-    subtitle:
-      "Master-Prompts für Social Media, Blog, Produkttexte & Newsletter.",
-
-    backend: "Backend",
-    byok: "BYOK",
-    plan: "Plan",
-    stripeLabel: "Stripe",
-
-    checkoutOpen: "Checkout öffnen",
-    manage: "Abo verwalten",
-    sync: "Sync",
-    restore: "Account wiederherstellen",
-
-    apiKeyTitle: "OpenAI API-Key (BYOK)",
-    show: "Anzeigen",
-    hide: "Ausblenden",
-    test: "Testen",
-    keyHintByokOnly:
-      "Hinweis: BYOK-Only aktiv. Ohne eigenen Key kann FREE nicht generieren.",
-    keyHintNoKey:
-      "Hinweis: Kein Key gesetzt. PRO kann trotzdem laufen (Server-Credits), wenn dein Account PRO ist.",
-
-    useCase: "Anwendungsfall",
-    tone: "Ton",
-    topic: "Thema / Kontext",
-    extra: "Extra Hinweise (z.B. „3 Varianten, Hook + CTA“)",
-    outputLang: "Output-Sprache",
-
-    customUseCase: "Eigener Anwendungsfall",
-    customTone: "Eigener Ton",
-
-    boost: "Quality Boost",
-    boostHint: "Mehr Tiefe & Qualität",
-
-    generate: "Prompt generieren",
-    generating: "Generiere…",
-
-    outputTitle: "Output",
-    historyTitle: "History",
-
-    copy: "Kopieren",
-    copied: "Kopiert",
-    clearHistory: "History löschen",
-
-    planFree: "FREE",
-    planPro: "PRO",
-    resetOn: "Reset am",
-    cancelScheduled: "gekündigt zum",
-
-    proModalTitle: "GLE PRO",
-    proModalText:
-      "PRO = Server-Key inklusive + höhere Limits + Boost.\n\n✅ Server-Key inklusive\n✅ Mehr Prompts / Monat\n✅ Quality Boost (optional)\n\nNach der Zahlung kommst du zurück – PRO wird aktiviert.",
-    later: "Später",
-    getPro: "Jetzt PRO holen",
-
-    restoreTitle: "Account wiederherstellen",
-    restoreText:
-      "Wenn du bereits bezahlt hast, kannst du deinen Account über die Stripe session_id wieder synchronisieren.\n\nTipp: Die session_id findest du in der Success-URL oder in Stripe (Checkout Session).",
-    sessionIdLabel: "session_id",
-    restoreSync: "Jetzt synchronisieren",
-    restoreCheckout: "Checkout erneut öffnen",
-
-    missingIdsTitle: "Account nicht gefunden",
-    missingIdsText:
-      "Für „Abo verwalten“ brauche ich deine gespeicherten IDs (accountId/userId). Wenn du auf einer neuen Domain bist, sind die ggf. leer. Nutze „Account wiederherstellen“ oder synchronisiere über session_id.",
-
-    ok: "OK",
-    close: "✕",
-
-    portalError: "Billing-Portal Fehler",
-    missingSession: "Keine session_id vorhanden.",
-    synced: "Sync erfolgreich.",
-
-    noKeySet: "Kein Key gesetzt.",
-    portalNeedsCustomer:
-      "Stripe Customer fehlt (missing_customer_id). → Bitte einmal Checkout starten ODER per session_id syncen.",
-
-    pickValue: "Bitte auswählen…",
-    customMissing: "Bitte fülle das Feld „Eigener …“ aus.",
-  },
-  en: {
-    title: "GLE Prompt Studio",
-    subtitle:
-      "Master prompts for social media, blogs, product copy & newsletters.",
-
-    backend: "Backend",
-    byok: "BYOK",
-    plan: "Plan",
-    stripeLabel: "Stripe",
-
-    checkoutOpen: "Open checkout",
-    manage: "Manage subscription",
-    sync: "Sync",
-    restore: "Restore account",
-
-    apiKeyTitle: "OpenAI API Key (BYOK)",
-    show: "Show",
-    hide: "Hide",
-    test: "Test",
-    keyHintByokOnly:
-      "Note: BYOK-only is enabled. FREE cannot generate without your own key.",
-    keyHintNoKey:
-      "Note: No key set. PRO can still work (server credits) if your account is PRO.",
-
-    useCase: "Use case",
-    tone: "Tone",
-    topic: "Topic / context",
-    extra: "Extra notes (e.g. “3 variants, hook + CTA”)",
-    outputLang: "Output language",
-
-    customUseCase: "Custom use case",
-    customTone: "Custom tone",
-
-    boost: "Quality Boost",
-    boostHint: "More depth & quality",
-
-    generate: "Generate prompt",
-    generating: "Generating…",
-
-    outputTitle: "Output",
-    historyTitle: "History",
-
-    copy: "Copy",
-    copied: "Copied",
-    clearHistory: "Clear history",
-
-    planFree: "FREE",
-    planPro: "PRO",
-    resetOn: "Resets on",
-    cancelScheduled: "cancels on",
-
-    proModalTitle: "GLE PRO",
-    proModalText:
-      "PRO = server key included + higher limits + boost.\n\n✅ Server key included\n✅ More prompts / month\n✅ Quality Boost (optional)\n\nAfter payment you’ll return – PRO will be activated.",
-    later: "Later",
-    getPro: "Get PRO now",
-
-    restoreTitle: "Restore account",
-    restoreText:
-      "If you already paid, you can restore your account using the Stripe session_id.\n\nTip: You can find session_id in the success URL or in Stripe (Checkout Session).",
-    sessionIdLabel: "session_id",
-    restoreSync: "Sync now",
-    restoreCheckout: "Open checkout again",
-
-    missingIdsTitle: "Account not found",
-    missingIdsText:
-      "To open the Billing Portal I need your saved IDs (accountId/userId). On a new domain those can be empty. Use “Restore account” or sync via session_id.",
-
-    ok: "OK",
-    close: "✕",
-
-    portalError: "Billing Portal error",
-    missingSession: "No session_id available.",
-    synced: "Sync successful.",
-
-    noKeySet: "No key set.",
-    portalNeedsCustomer:
-      "Stripe customer missing (missing_customer_id). → Start checkout once OR sync via session_id.",
-
-    pickValue: "Please choose…",
-    customMissing: "Please fill the “Custom …” field.",
-  },
-};
-
-/* =========================
-   Small helpers
-========================= */
-
-function safeGet(key: string) {
-  try {
-    return localStorage.getItem(key) || "";
-  } catch {
-    return "";
-  }
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
 }
-function safeSet(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {}
-}
-function safeRemove(key: string) {
-  try {
-    localStorage.removeItem(key);
-  } catch {}
+
+function formatDate(ts: number, lang: "de" | "en" = "de") {
+  if (!ts || ts <= 0) return "-";
+  const d = new Date(ts);
+  const dd = pad2(d.getDate());
+  const mm = pad2(d.getMonth() + 1);
+  const yyyy = d.getFullYear();
+  if (lang === "en") return `${yyyy}-${mm}-${dd}`;
+  return `${dd}.${mm}.${yyyy}`;
 }
 
 function randomId(prefix: string) {
-  const webCrypto = (globalThis as any).crypto as Crypto | undefined;
-  if (webCrypto?.getRandomValues) {
-    const bytes = new Uint8Array(8);
-    webCrypto.getRandomValues(bytes);
-    const hex = Array.from(bytes)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return `${prefix}_${hex}`;
-  }
-  return `${prefix}_${Math.random().toString(16).slice(2)}${Math.random()
-    .toString(16)
-    .slice(2)}`.slice(0, 28);
+  const b = new Uint8Array(8);
+  crypto.getRandomValues(b);
+  const hex = Array.from(b)
+    .map((x) => x.toString(16).padStart(2, "0"))
+    .join("");
+  return `${prefix}_${hex}`;
 }
 
-function normalizeTs(ts?: number) {
-  if (!ts) return 0;
-  return ts < 1_000_000_000_000 ? ts * 1000 : ts;
-}
-
-function formatDate(ts?: number, lang: UiLang = "de") {
-  const n = normalizeTs(ts);
-  if (!n) return "";
+function safeJsonParse<T>(s: string, fallback: T): T {
   try {
-    const d = new Date(n);
-    return d.toLocaleDateString(lang === "de" ? "de-DE" : "en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    return JSON.parse(s) as T;
   } catch {
-    return "";
+    return fallback;
   }
 }
 
-async function readJsonOrText(res: Response) {
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) {
-    return res.json().catch(() => ({}));
-  }
-  const text = await res.text().catch(() => "");
-  return { _text: text };
+function clampStr(s: string, max = 6000) {
+  const t = String(s || "");
+  return t.length > max ? t.slice(0, max) : t;
 }
 
-async function fetchJsonTry(url: string, init?: RequestInit) {
-  const res = await fetch(url, { cache: "no-store", ...init });
-  const data = await readJsonOrText(res);
-  return { res, data };
+function getQueryParam(name: string) {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(name) || "";
 }
 
-function headersWithIds(uid: string, acc: string, apiKey?: string) {
-  const h: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-gle-user": uid,
-    "x-gle-account-id": acc,
-  };
-  if (apiKey) h["x-gle-api-key"] = apiKey;
-  return h;
+function replaceUrlWithoutParams() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.search = "";
+  window.history.replaceState({}, "", url.toString());
 }
 
-function pickLimits(obj: any, fallbackFree: number, fallbackPro: number) {
-  const free =
-    Number(obj?.free ?? obj?.FREE_LIMIT ?? obj?.FREE ?? fallbackFree) ||
-    fallbackFree;
-  const pro =
-    Number(obj?.pro ?? obj?.PRO_LIMIT ?? obj?.PRO ?? fallbackPro) ||
-    fallbackPro;
-  return { free, pro };
+function blockBillingIfMaintenance() {
+  if (!MAINTENANCE_BILLING_OFF) return false;
+  alert("Wartung aktiv – Abo/Checkout ist aktuell deaktiviert.");
+  return true;
 }
 
-function pickUsed(obj: any) {
-  const u = obj?.used ?? obj?.count ?? 0;
-  const n = Number(u);
-  return Number.isFinite(n) ? n : 0;
+/* -------------------------
+   UI building blocks
+-------------------------- */
+function Card(props: {
+  title: string;
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid #202230",
+        background: "#0b0d14",
+        borderRadius: 18,
+        padding: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          alignItems: "center",
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#e7e7ff" }}>{props.title}</div>
+        <div>{props.right}</div>
+      </div>
+      <div>{props.children}</div>
+    </div>
+  );
 }
 
-/* =========================
-   Modal
-========================= */
+function Btn(props: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  kind?: "primary" | "ghost";
+  title?: string;
+}) {
+  const { disabled, kind = "ghost" } = props;
+  const bg =
+    kind === "primary"
+      ? disabled
+        ? "rgba(0,230,118,.16)"
+        : "rgba(0,230,118,.24)"
+      : "rgba(15,17,24,.9)";
+  const br =
+    kind === "primary" ? "1px solid rgba(0,230,118,.35)" : "1px solid #202230";
+  return (
+    <button
+      type="button"
+      title={props.title}
+      disabled={disabled}
+      onClick={props.onClick}
+      style={{
+        borderRadius: 12,
+        border: br,
+        background: bg,
+        color: "#e7e7ff",
+        padding: "8px 12px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
+        fontWeight: 800,
+        fontSize: 13,
+      }}
+    >
+      {props.children}
+    </button>
+  );
+}
 
-function Modal({
-  title,
-  children,
-  onClose,
-  closeLabel,
-}: {
+function Input(props: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <input
+      value={props.value}
+      type={props.type || "text"}
+      onChange={(e) => props.onChange(e.target.value)}
+      placeholder={props.placeholder}
+      style={{
+        width: "100%",
+        borderRadius: 12,
+        border: "1px solid #202230",
+        background: "#0f1118",
+        color: "#e7e7ff",
+        padding: "10px 12px",
+        outline: "none",
+      }}
+    />
+  );
+}
+
+function TextArea(props: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <textarea
+      value={props.value}
+      rows={props.rows || 4}
+      onChange={(e) => props.onChange(e.target.value)}
+      placeholder={props.placeholder}
+      style={{
+        width: "100%",
+        borderRadius: 12,
+        border: "1px solid #202230",
+        background: "#0f1118",
+        color: "#e7e7ff",
+        padding: "10px 12px",
+        outline: "none",
+        resize: "vertical",
+      }}
+    />
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 6 }}>
+      {children}
+    </div>
+  );
+}
+
+function Row(props: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 12,
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: "#202230", margin: "14px 0" }} />;
+}
+
+/* -------------------------
+   PRO Modal
+-------------------------- */
+function Modal(props: {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
@@ -561,9 +329,9 @@ function Modal({
         display: "grid",
         placeItems: "center",
         padding: 14,
-        zIndex: 50,
+        zIndex: 9999,
       }}
-      onMouseDown={onClose}
+      onMouseDown={props.onClose}
     >
       <div
         style={{
@@ -584,604 +352,413 @@ function Modal({
             alignItems: "center",
           }}
         >
-          <div style={{ fontWeight: 900 }}>{title}</div>
-          <button
-            onClick={onClose}
-            style={{
-              borderRadius: 12,
-              border: "1px solid #202230",
-              background: "#0f1118",
-              color: "#e7e7ff",
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-            aria-label={closeLabel}
-            title={closeLabel}
-            type="button"
-          >
-            {closeLabel}
-          </button>
+          <div style={{ fontWeight: 900 }}>{props.title}</div>
+          <Btn onClick={props.onClose} title={props.closeLabel}>
+            {props.closeLabel}
+          </Btn>
         </div>
-
-        <div style={{ marginTop: 12 }}>{children}</div>
+        <div style={{ marginTop: 12 }}>{props.children}</div>
       </div>
     </div>
   );
 }
 
-/* =========================
+/* -------------------------
    Page
-========================= */
-
+-------------------------- */
 export default function Page() {
-  const [uiLang, setUiLang] = useState<UiLang>("de");
-  const [outLang, setOutLang] = useState<OutLang>("de");
-  const t = TXT[uiLang];
+  // IDs
+  const [userId, setUserId] = useState("anon");
+  const [accountId, setAccountId] = useState("");
 
-  // backend
-  const [backendStatus, setBackendStatus] = useState<BackendStatus>("unknown");
-  const [byokOnly, setByokOnly] = useState(false);
-  const [stripeExtra, setStripeExtra] = useState("");
-  const [models, setModels] = useState({
-    byok: "gpt-4o-mini",
-    pro: "gpt-4o-mini",
-    boost: "gpt-4o",
-  });
-  const [limits, setLimits] = useState({ free: 25, pro: 250 });
+  // BYOK key
+  const [byokKey, setByokKey] = useState("");
+  const [byokVisible, setByokVisible] = useState(false);
 
-  // account
-  const [plan, setPlan] = useState<Plan>("FREE");
-  const [renewAt, setRenewAt] = useState<number | undefined>(undefined);
-  const [cancelAt, setCancelAt] = useState<number | undefined>(undefined);
-  const [used, setUsed] = useState(0);
+  // Backend status
+  const [health, setHealth] = useState<any>(null);
+  const [me, setMe] = useState<ApiMe | null>(null);
 
-  const isPro = plan === "PRO";
-  const limit = isPro ? limits.pro : limits.free;
-  const progress = Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
+  // Form
+  const useCases = useMemo(
+    () => [
+      "Social Media Post",
+      "Produktbeschreibung",
+      "Landingpage",
+      "E-Mail Marketing",
+      "Blog Artikel",
+      "YouTube Script",
+      "Ad Copy (Meta/Google)",
+      "LinkedIn Post",
+      "Funnel / Offer",
+      "Sonstiges (Custom)",
+    ],
+    []
+  );
+  const tones = useMemo(
+    () => [
+      "Neutral",
+      "Freundlich",
+      "Professionell",
+      "Direkt",
+      "Salesy",
+      "Luxus",
+      "Humorvoll",
+      "Storytelling",
+      "Autoritativ",
+      "Sonstiges (Custom)",
+    ],
+    []
+  );
 
-  // api key
-  const [apiKey, setApiKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
-  const [keyStatus, setKeyStatus] = useState<"idle" | "ok" | "bad">("idle");
-  const [keyMsg, setKeyMsg] = useState("");
-
-  // generator inputs (dropdown)
-  const [useCaseKey, setUseCaseKey] = useState<string>("social_media_post");
-  const [useCaseCustom, setUseCaseCustom] = useState<string>("");
-  const [toneKey, setToneKey] = useState<string>("neutral");
-  const [toneCustom, setToneCustom] = useState<string>("");
+  const [useCaseSel, setUseCaseSel] = useState(useCases[0]);
+  const [toneSel, setToneSel] = useState(tones[0]);
+  const [useCaseCustom, setUseCaseCustom] = useState("");
+  const [toneCustom, setToneCustom] = useState("");
 
   const [topic, setTopic] = useState("");
   const [extra, setExtra] = useState("");
+  const [outLang, setOutLang] = useState<"de" | "en">("de");
   const [boost, setBoost] = useState(false);
 
-  // output
+  // Output
   const [output, setOutput] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
-  // ui messages
-  const [error, setError] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
+  // History
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // history
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const outputRef = useRef<HTMLTextAreaElement | null>(null);
+  // PRO modal
+  const [showPro, setShowPro] = useState(false);
 
-  // modals
-  const [showProModal, setShowProModal] = useState(false);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
-  const [showMissingIdsModal, setShowMissingIdsModal] = useState(false);
+  const plan: Plan = (me?.plan || "FREE") as Plan;
 
-  // restore
-  const [restoreSessionId, setRestoreSessionId] = useState("");
-  const [lastSessionId, setLastSessionId] = useState("");
+  const effectiveUseCase =
+    useCaseSel === "Sonstiges (Custom)" ? useCaseCustom.trim() : useCaseSel;
+  const effectiveTone =
+    toneSel === "Sonstiges (Custom)" ? toneCustom.trim() : toneSel;
 
-  const renewText = useMemo(() => {
-    if (!renewAt) return "";
-    return `${t.resetOn} ${formatDate(renewAt, uiLang)}`;
-  }, [renewAt, uiLang, t.resetOn]);
+  const headersBase = useMemo(() => {
+    const h: Record<string, string> = { "Content-Type": "application/json" };
+    if (userId) h["x-gle-user"] = userId;
+    if (accountId) h["x-gle-account-id"] = accountId;
+    if (byokKey.trim()) h["x-gle-api-key"] = byokKey.trim();
+    return h;
+  }, [userId, accountId, byokKey]);
 
-  const cancelText = useMemo(() => {
-    if (!cancelAt) return "";
-    return `${t.cancelScheduled} ${formatDate(cancelAt, uiLang)}`;
-  }, [cancelAt, uiLang, t.cancelScheduled]);
+  // init
+  useEffect(() => {
+    // ids
+    const uid = localStorage.getItem(LS.userId) || "anon";
+    const aid = localStorage.getItem(LS.accountId) || "";
+    const key = localStorage.getItem(LS.byok) || "";
+    setUserId(uid);
+    setAccountId(aid);
+    setByokKey(key);
 
-  function showToast(msg: string) {
-    setToastMsg(msg);
-    console.log("[GLE]", msg);
-    window.clearTimeout((showToast as any)._t);
-    (showToast as any)._t = window.setTimeout(() => setToastMsg(""), 2600);
-  }
+    // history
+    const hRaw = localStorage.getItem(LS.history) || "[]";
+    const items = safeJsonParse<HistoryItem[]>(hRaw, []);
+    setHistory(Array.isArray(items) ? items : []);
 
-  function readIds() {
-    const uid = safeGet(USER_ID_KEY).trim();
-    const acc = safeGet(ACCOUNT_ID_KEY).trim();
-    return { uid, acc };
-  }
+    // bypass remember
+    const qp = getQueryParam("bypass");
+    if (qp && qp.trim().length > 0) localStorage.setItem(LS.bypass, "1");
 
-  function ensureIds() {
-    const { uid, acc } = readIds();
-    if (uid && acc) return { uid, acc };
-
-    const newUid = uid || randomId("u");
-    const newAcc = acc || randomId("acc");
-    safeSet(USER_ID_KEY, newUid);
-    safeSet(ACCOUNT_ID_KEY, newAcc);
-    return { uid: newUid, acc: newAcc };
-  }
-
-  function applyMe(me: MeResp) {
-    const newPlan = (me.plan || "FREE") as Plan;
-    setPlan(newPlan);
-    safeSet(PLAN_STORAGE_KEY, newPlan);
-
-    setRenewAt(
-      typeof me.renewAt === "number" ? normalizeTs(me.renewAt) : undefined
-    );
-    setCancelAt(
-      typeof me.cancelAt === "number" ? normalizeTs(me.cancelAt) : undefined
-    );
-
-    if (me.limits) {
-      const next = pickLimits(me.limits as any, limits.free, limits.pro);
-      setLimits(next);
+    // auto sync from checkout success (if your success route returns to "/?session_id=...")
+    const sid = getQueryParam("session_id");
+    if (sid) {
+      // we'll sync below after IDs are loaded; defer
+      setTimeout(() => {
+        syncCheckoutSession(sid).finally(() => replaceUrlWithoutParams());
+      }, 50);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    if (me.usage) setUsed(pickUsed(me.usage));
+  // ensure accountId exists
+  useEffect(() => {
+    if (!accountId) {
+      const aid = randomId("acc");
+      localStorage.setItem(LS.accountId, aid);
+      setAccountId(aid);
+    }
+    if (!userId || userId === "anon") {
+      const uid = "usr_" + randomId("u").slice(0, 14);
+      localStorage.setItem(LS.userId, uid);
+      setUserId(uid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId, userId]);
 
-    const stripeMode = me.stripe?.mode
-      ? String(me.stripe.mode).toUpperCase()
-      : "";
-    if (stripeMode) setStripeExtra(stripeMode);
+  // load status
+  useEffect(() => {
+    if (!accountId) return;
+    refreshAll().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  async function refreshAll() {
+    setErr("");
+    await Promise.all([fetchHealth(), fetchMe()]);
   }
 
-  async function loadHealth() {
+  async function fetchHealth() {
     try {
-      const { res, data } = await fetchJsonTry(ENDPOINTS.health, {
+      const r = await fetch(`${BACKEND}/api/health`, { method: "GET" });
+      const j = await r.json().catch(() => ({}));
+      setHealth({ _status: r.status, ...j });
+    } catch (e: any) {
+      setHealth({ _status: 0, error: String(e?.message || e) });
+    }
+  }
+
+  async function fetchMe() {
+    try {
+      const r = await fetch(`${BACKEND}/api/me`, {
         method: "GET",
+        headers: headersBase,
       });
-      if (!res.ok) throw new Error("health_down");
-
-      const h = data as Health;
-      setBackendStatus("ok");
-      setByokOnly(!!h.byokOnly);
-
-      setModels({
-        byok: h.models?.byok || "gpt-4o-mini",
-        pro: h.models?.pro || "gpt-4o-mini",
-        boost: h.models?.boost || "gpt-4o",
-      });
-
-      if (h.limits) setLimits(pickLimits(h.limits as any, 25, 250));
-
-      const stripeInfo =
-        h.stripe === false
-          ? "disabled"
-          : `${String(h.stripeMode || "").toUpperCase()}${
-              h.stripePriceId ? ` · ${h.stripePriceId}` : ""
-            }`.trim();
-
-      if (stripeInfo) setStripeExtra(stripeInfo);
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j?.ok) setMe(j as ApiMe);
+      else setMe(null);
     } catch {
-      setBackendStatus("down");
+      setMe(null);
     }
   }
 
-  async function loadMe() {
-    const { uid, acc } = ensureIds();
-    const key = safeGet(APIKEY_STORAGE_KEY).trim();
-
+  async function testByokKey() {
+    setErr("");
+    const key = byokKey.trim();
+    if (!key) {
+      alert("Kein API-Key gesetzt.");
+      return;
+    }
     try {
-      const { res, data } = await fetchJsonTry(ENDPOINTS.me, {
-        method: "GET",
-        headers: headersWithIds(uid, acc, key),
+      const r = await fetch(`${BACKEND}/api/test`, {
+        method: "POST",
+        headers: headersBase,
+        body: JSON.stringify({ accountId }),
       });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) {
+        alert(`Key Test fehlgeschlagen: ${j?.error || "unknown"}`);
+        return;
+      }
+      alert(`Key OK ✅ (sample: "${String(j.sample || "").slice(0, 40)}")`);
+    } catch (e: any) {
+      alert(`Key Test Error: ${String(e?.message || e)}`);
+    }
+  }
 
-      if (!res.ok) return;
-      applyMe(data as MeResp);
+  async function generate() {
+    setErr("");
+    setOutput("");
+    const uc = effectiveUseCase.trim();
+    const tn = effectiveTone.trim();
+    if (!uc) return setErr("Bitte Anwendungsfall wählen oder Custom füllen.");
+    if (!tn) return setErr("Bitte Ton wählen oder Custom füllen.");
+    if (!topic.trim()) return setErr("Bitte Thema/Kontext ausfüllen.");
+
+    setLoading(true);
+    try {
+      const r = await fetch(`${BACKEND}/api/generate`, {
+        method: "POST",
+        headers: headersBase,
+        body: JSON.stringify({
+          accountId,
+          useCase: uc,
+          tone: tn,
+          topic: topic.trim(),
+          extra: extra.trim(),
+          outLang,
+          boost,
+        }),
+      });
+      const j = (await r.json().catch(() => ({}))) as GenResp;
+
+      if (!r.ok || !j || (j as any).ok === false) {
+        const e = j as any;
+        const msg = e?.message || e?.error || `request_failed_${r.status}`;
+        // quota -> show info, offer PRO
+        if (
+          e?.error === "quota_reached" ||
+          e?.error === "boost_quota_reached"
+        ) {
+          const renewAt = e?.renewAt
+            ? formatDate(Number(e.renewAt), outLang)
+            : "-";
+          setErr(`Limit erreicht. Reset am ${renewAt}.`);
+          if (plan === "FREE") setShowPro(true);
+          return;
+        }
+        // missing key -> show PRO modal
+        if (e?.error === "missing_api_key") {
+          setErr("Kein API-Key gesetzt. Setze BYOK oder hol PRO.");
+          setShowPro(true);
+          return;
+        }
+        setErr(String(msg));
+        return;
+      }
+
+      const ok = j as any;
+      const out = String(ok.output || "").trim();
+      setOutput(out);
+
+      // refresh me (plan/usage)
+      setMe((prev) =>
+        prev
+          ? {
+              ...prev,
+              plan: ok.plan,
+              renewAt: ok.renewAt,
+              cancelAt: ok.cancelAt,
+              usage: ok.usage,
+              limits: ok.limits,
+            }
+          : prev
+      );
+
+      // history
+      const item: HistoryItem = {
+        ts: now(),
+        useCase: uc,
+        tone: tn,
+        topic: topic.trim(),
+        outLang,
+        boost,
+        output: out,
+      };
+      const next = [item, ...history].slice(0, 50);
+      setHistory(next);
+      localStorage.setItem(LS.history, JSON.stringify(next));
+    } catch (e: any) {
+      setErr(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openCheckout() {
+    if (blockBillingIfMaintenance()) return;
+    setErr("");
+    try {
+      const r = await fetch(`${BACKEND}/api/create-checkout-session`, {
+        method: "POST",
+        headers: headersBase,
+        body: JSON.stringify({ accountId }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok || !j?.url) {
+        alert(`Checkout Error: ${j?.error || j?.message || r.status}`);
+        return;
+      }
+      window.location.href = String(j.url);
+    } catch (e: any) {
+      alert(`Checkout Error: ${String(e?.message || e)}`);
+    }
+  }
+
+  async function syncCheckoutSession(sessionId: string) {
+    if (blockBillingIfMaintenance()) return;
+    if (!sessionId) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/sync-checkout-session`, {
+        method: "POST",
+        headers: headersBase,
+        body: JSON.stringify({ accountId, sessionId }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) return;
+      // refresh me
+      await fetchMe();
     } catch {
       // ignore
     }
   }
 
-  useEffect(() => {
-    const u = (safeGet(UI_LANG_KEY).trim() as UiLang) || "de";
-    const o = (safeGet(OUT_LANG_KEY).trim() as OutLang) || "de";
-    if (u === "de" || u === "en") setUiLang(u);
-    if (o === "de" || o === "en") setOutLang(o);
-
-    const p = safeGet(PLAN_STORAGE_KEY).trim() as Plan;
-    if (p === "FREE" || p === "PRO") setPlan(p);
-
-    const k = safeGet(APIKEY_STORAGE_KEY).trim();
-    if (k) setApiKey(k);
-
-    const ls = safeGet(LAST_SESSION_ID_KEY).trim();
-    if (ls) setLastSessionId(ls);
-
-    // NEW: restore dropdown selections
-    const ucKey = safeGet(USECASE_KEY_KEY).trim();
-    const ucCustom = safeGet(USECASE_CUSTOM_KEY);
-    const tKey = safeGet(TONE_KEY_KEY).trim();
-    const tCustom = safeGet(TONE_CUSTOM_KEY);
-
-    if (ucKey) setUseCaseKey(ucKey);
-    if (ucCustom) setUseCaseCustom(ucCustom);
-    if (tKey) setToneKey(tKey);
-    if (tCustom) setToneCustom(tCustom);
-
+  async function openBillingPortal() {
+    if (blockBillingIfMaintenance()) return;
+    setErr("");
     try {
-      const raw = safeGet(HISTORY_STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
-      if (Array.isArray(parsed)) setHistory(parsed.slice(0, MAX_HISTORY));
-    } catch {}
+      const r = await fetch(`${BACKEND}/api/create-portal-session`, {
+        method: "POST",
+        headers: headersBase,
+        body: JSON.stringify({ accountId }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok || !j?.url) {
+        alert(`Portal Error: ${j?.error || j?.message || r.status}`);
+        return;
+      }
+      window.location.href = String(j.url);
+    } catch (e: any) {
+      alert(`Portal Error: ${String(e?.message || e)}`);
+    }
+  }
 
-    ensureIds();
-    loadHealth();
-    loadMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => safeSet(UI_LANG_KEY, uiLang), [uiLang]);
-  useEffect(() => safeSet(OUT_LANG_KEY, outLang), [outLang]);
-  useEffect(() => safeSet(APIKEY_STORAGE_KEY, apiKey.trim()), [apiKey]);
-
-  // persist dropdowns
-  useEffect(() => safeSet(USECASE_KEY_KEY, useCaseKey), [useCaseKey]);
-  useEffect(() => safeSet(USECASE_CUSTOM_KEY, useCaseCustom), [useCaseCustom]);
-  useEffect(() => safeSet(TONE_KEY_KEY, toneKey), [toneKey]);
-  useEffect(() => safeSet(TONE_CUSTOM_KEY, toneCustom), [toneCustom]);
-
-  function pushHistory(entry: HistoryEntry) {
-    const next = [entry, ...history].slice(0, MAX_HISTORY);
-    setHistory(next);
-    safeSet(HISTORY_STORAGE_KEY, JSON.stringify(next));
+  function copyOutput() {
+    const text = output || "";
+    if (!text.trim()) return;
+    navigator.clipboard
+      .writeText(text)
+      .then(() => alert("Kopiert ✅"))
+      .catch(() => alert("Copy fehlgeschlagen"));
   }
 
   function clearHistory() {
+    if (!confirm("History löschen?")) return;
     setHistory([]);
-    safeRemove(HISTORY_STORAGE_KEY);
+    localStorage.setItem(LS.history, "[]");
   }
 
-  async function testKey() {
-    setKeyStatus("idle");
-    setKeyMsg("");
-    const key = apiKey.trim();
-    if (!key) {
-      setKeyStatus("bad");
-      setKeyMsg(t.noKeySet);
-      return;
-    }
-
-    try {
-      const { uid, acc } = ensureIds();
-      const { res, data } = await fetchJsonTry(ENDPOINTS.testKey, {
-        method: "POST",
-        headers: headersWithIds(uid, acc, key),
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        setKeyStatus("bad");
-        setKeyMsg(String((data as any)?.error || `HTTP ${res.status}`));
-        return;
-      }
-
-      setKeyStatus("ok");
-      setKeyMsg("OK");
-    } catch (e: any) {
-      setKeyStatus("bad");
-      setKeyMsg(String(e?.message || "error"));
-    }
+  function saveByokKey(v: string) {
+    const t = v;
+    setByokKey(t);
+    localStorage.setItem(LS.byok, t);
   }
 
-  async function openCheckout() {
-    setError("");
-    const { uid, acc } = ensureIds();
-
-    try {
-      const { res, data } = await fetchJsonTry(ENDPOINTS.checkout, {
-        method: "POST",
-        headers: headersWithIds(uid, acc, apiKey.trim()),
-        body: JSON.stringify({ userId: uid, accountId: acc }),
-      });
-
-      const url = String((data as any)?.url || "");
-      const sessionId = String((data as any)?.sessionId || "");
-
-      if (!res.ok || !url) {
-        throw new Error(
-          String((data as any)?.error || `checkout_${res.status}`)
-        );
-      }
-
-      if (sessionId) {
-        safeSet(LAST_SESSION_ID_KEY, sessionId);
-        setLastSessionId(sessionId);
-      }
-
-      window.location.href = url;
-    } catch (e: any) {
-      setError(String(e?.message || "checkout_failed"));
+  function restoreAccount(newAcc: string, newUser: string) {
+    const a = newAcc.trim();
+    const u = newUser.trim();
+    if (!a) return alert("AccountId fehlt.");
+    localStorage.setItem(LS.accountId, a);
+    setAccountId(a);
+    if (u) {
+      localStorage.setItem(LS.userId, u);
+      setUserId(u);
     }
+    alert("Account wiederhergestellt ✅ (Reload optional)");
   }
 
-  async function openBillingPortal() {
-    setError("");
+  // Restore UI
+  const [restoreAcc, setRestoreAcc] = useState("");
+  const [restoreUser, setRestoreUser] = useState("");
 
-    const { uid, acc } = readIds();
-    if (!uid || !acc) {
-      setShowMissingIdsModal(true);
-      return;
-    }
+  const badge = useMemo(() => {
+    const used = me?.usage?.used ?? 0;
+    const boostUsed = me?.usage?.boostUsed ?? 0;
+    const limFree = me?.limits?.FREE_LIMIT ?? health?.limits?.FREE_LIMIT ?? 0;
+    const limPro = me?.limits?.PRO_LIMIT ?? health?.limits?.PRO_LIMIT ?? 0;
+    const limBoost =
+      me?.limits?.PRO_BOOST_LIMIT ?? health?.limits?.PRO_BOOST_LIMIT ?? 0;
 
-    const body = JSON.stringify({ userId: uid, accountId: acc });
-    const hdrs = headersWithIds(uid, acc, apiKey.trim());
+    const limit = plan === "PRO" ? limPro : limFree;
 
-    try {
-      let { res, data } = await fetchJsonTry(ENDPOINTS.billingPortal, {
-        method: "POST",
-        headers: hdrs,
-        body,
-      });
-
-      if (res.status === 404) {
-        showToast(`${t.portalError}: 404 → fallback`);
-        ({ res, data } = await fetchJsonTry(ENDPOINTS.billingPortalFallback, {
-          method: "POST",
-          headers: hdrs,
-          body,
-        }));
-      }
-
-      const url = String((data as any)?.url || "");
-
-      if (!res.ok || !url) {
-        const err = String((data as any)?.error || `portal_${res.status}`);
-
-        if (err === "missing_customer_id") {
-          showToast(t.portalNeedsCustomer);
-          setShowRestoreModal(true);
-          return;
-        }
-
-        showToast(`${t.portalError}: ${err}`);
-        return;
-      }
-
-      window.location.href = url;
-    } catch (e: any) {
-      showToast(`${t.portalError}: ${String(e?.message || "unknown_error")}`);
-    }
-  }
-
-  async function syncCheckout(sessionIdRaw?: string) {
-    setError("");
-
-    const sessionId = String(
-      sessionIdRaw || restoreSessionId || lastSessionId || ""
-    ).trim();
-    if (!sessionId) {
-      showToast(t.missingSession);
-      return;
-    }
-
-    const { uid, acc } = ensureIds();
-
-    try {
-      const { res, data } = await fetchJsonTry(ENDPOINTS.sync, {
-        method: "POST",
-        headers: headersWithIds(uid, acc, apiKey.trim()),
-        body: JSON.stringify({ sessionId, userId: uid, accountId: acc }),
-      });
-
-      if (!res.ok)
-        throw new Error(String((data as any)?.error || `sync_${res.status}`));
-
-      safeSet(LAST_SESSION_ID_KEY, sessionId);
-      setLastSessionId(sessionId);
-
-      await loadMe();
-      showToast(t.synced);
-    } catch (e: any) {
-      showToast(`Sync error: ${String(e?.message || "unknown_error")}`);
-    }
-  }
-
-  async function onGenerate(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    const { uid, acc } = ensureIds();
-
-    const useCase =
-      useCaseKey === "custom"
-        ? useCaseCustom.trim()
-        : optLabel(USE_CASES, useCaseKey, outLang);
-    const tone =
-      toneKey === "custom"
-        ? toneCustom.trim()
-        : optLabel(TONES, toneKey, outLang);
-
-    if (useCaseKey === "custom" && !useCase) {
-      setError(t.customMissing);
-      return;
-    }
-    if (toneKey === "custom" && !tone) {
-      setError(t.customMissing);
-      return;
-    }
-
-    try {
-      setIsGenerating(true);
-
-      const { res, data } = await fetchJsonTry(ENDPOINTS.generate, {
-        method: "POST",
-        headers: headersWithIds(uid, acc, apiKey.trim()),
-        body: JSON.stringify({
-          useCase,
-          tone,
-          topic,
-          extra,
-          outLang,
-          boost,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = String((data as any)?.error || `gen_${res.status}`);
-        throw new Error(err);
-      }
-
-      const text = String((data as any)?.output || (data as any)?.text || "");
-      setOutput(text);
-
-      const newPlan = String((data as any)?.plan || plan) as Plan;
-      if (newPlan === "FREE" || newPlan === "PRO") {
-        setPlan(newPlan);
-        safeSet(PLAN_STORAGE_KEY, newPlan);
-      }
-
-      const usageFromGen = (data as any)?.usage;
-      if (usageFromGen) setUsed(pickUsed(usageFromGen));
-
-      const limitsFromGen = (data as any)?.limits;
-      if (limitsFromGen)
-        setLimits(pickLimits(limitsFromGen, limits.free, limits.pro));
-
-      pushHistory({
-        id: randomId("h"),
-        timestamp: Date.now(),
-        useCase,
-        tone,
-        topic,
-        extra,
-        outLang,
-        boost,
-        result: text,
-      });
-    } catch (e: any) {
-      setError(String(e?.message || "generate_failed"));
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function copyOutput() {
-    try {
-      await navigator.clipboard.writeText(output || "");
-      showToast(t.copied);
-    } catch {
-      outputRef.current?.select();
-      document.execCommand("copy");
-      showToast(t.copied);
-    }
-  }
-
-  /* =========================
-     Styles
-  ========================= */
-
-  const card: React.CSSProperties = {
-    border: "1px solid #202230",
-    borderRadius: 18,
-    background: "#0b0d14",
-    padding: 14,
-  };
-  const row: React.CSSProperties = {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    alignItems: "center",
-  };
-  const btn: React.CSSProperties = {
-    borderRadius: 14,
-    border: "1px solid #202230",
-    background: "#0f1118",
-    color: "#e7e7ff",
-    padding: "10px 12px",
-    cursor: "pointer",
-  };
-  const primaryBtn: React.CSSProperties = {
-    ...btn,
-    border: "1px solid #244d2f",
-    background: "rgba(20,83,45,.25)",
-    fontWeight: 900,
-  };
-  const input: React.CSSProperties = {
-    width: "100%",
-    borderRadius: 14,
-    border: "1px solid #202230",
-    background: "#0f1118",
-    color: "#e7e7ff",
-    padding: "10px 12px",
-    outline: "none",
-  };
-  const label: React.CSSProperties = {
-    fontSize: 12,
-    opacity: 0.85,
-    marginBottom: 6,
-  };
-
-  function pill(ok: boolean): React.CSSProperties {
     return {
-      padding: "6px 10px",
-      borderRadius: 999,
-      border: "1px solid #202230",
-      background: ok ? "rgba(20,83,45,.18)" : "rgba(185,28,28,.14)",
-      fontSize: 12,
-      fontWeight: 700,
+      used,
+      limit,
+      boostUsed,
+      boostLimit: limBoost,
+      renewAt: me?.renewAt ?? 0,
+      cancelAt: me?.cancelAt ?? 0,
     };
-  }
+  }, [me, health, plan]);
 
-  function SelectBox({
-    value,
-    onChange,
-    options,
-    dataAttr,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    options: Opt[];
-    dataAttr: string;
-  }) {
-    return (
-      <div style={{ position: "relative" }}>
-        <select
-          data-gle={dataAttr}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            ...input,
-            appearance: "none",
-            WebkitAppearance: "none",
-            MozAppearance: "none",
-            paddingRight: 36,
-            cursor: "pointer",
-          }}
-        >
-          {options.map((o) => (
-            <option key={o.key} value={o.key}>
-              {o.label[outLang]}
-            </option>
-          ))}
-        </select>
-        <span
-          style={{
-            position: "absolute",
-            right: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-            opacity: 0.65,
-            fontSize: 14,
-          }}
-        >
-          ▾
-        </span>
-      </div>
-    );
-  }
+  const proText =
+    "PRO = Server-Key inklusive + höhere Limits + Boost.\n\n✅ Server-Key inklusive\n✅ Mehr Prompts / Monat\n✅ Quality Boost (optional)\n\nNach der Zahlung kommst du zurück – PRO wird aktiviert.";
 
   return (
     <main
@@ -1189,486 +766,490 @@ export default function Page() {
         minHeight: "100vh",
         background: "#050608",
         color: "#e7e7ff",
-        padding: 16,
+        padding: 14,
       }}
     >
       <div
-        style={{
-          width: "min(980px, 96vw)",
-          margin: "0 auto",
-          display: "grid",
-          gap: 12,
-        }}
+        style={{ maxWidth: 980, margin: "0 auto", display: "grid", gap: 12 }}
       >
         {/* Header */}
-        <div style={card}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "10px 2px",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 950, fontSize: 20 }}>
+              GLE Prompt Studio
+            </div>
+            <div style={{ opacity: 0.75, fontSize: 12 }}>
+              Backend: {BACKEND.replace("https://", "")}
+              {MAINTENANCE_BILLING_OFF ? " · Billing-LOCK (UI)" : ""}
+            </div>
+          </div>
+
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
+              gap: 8,
               alignItems: "center",
+              flexWrap: "wrap",
             }}
           >
-            <div>
-              <div style={{ fontWeight: 950, fontSize: 18 }}>{t.title}</div>
-              <div style={{ marginTop: 4, opacity: 0.85, fontSize: 13 }}>
-                {t.subtitle}
-              </div>
-              {!!cancelText && (
-                <div style={{ marginTop: 6, opacity: 0.9, fontSize: 12 }}>
-                  {cancelText}
-                </div>
-              )}
+            <div
+              style={{
+                fontSize: 12,
+                padding: "6px 10px",
+                borderRadius: 999,
+                border: "1px solid #202230",
+                background: "#0b0d14",
+              }}
+            >
+              Plan: <b>{plan}</b>
             </div>
+            <Btn onClick={() => refreshAll()}>Refresh</Btn>
+            <Btn
+              kind="primary"
+              disabled={MAINTENANCE_BILLING_OFF}
+              onClick={() =>
+                plan === "PRO" ? openBillingPortal() : openCheckout()
+              }
+              title={
+                MAINTENANCE_BILLING_OFF ? "Billing deaktiviert" : undefined
+              }
+            >
+              {plan === "PRO" ? "Abo verwalten" : "Checkout öffnen"}
+            </Btn>
+          </div>
+        </div>
 
-            <div style={row}>
-              <div
+        {/* Status */}
+        <Card
+          title="Status"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn
+                onClick={() => setOutLang((p) => (p === "de" ? "en" : "de"))}
+              >
+                Lang: {outLang.toUpperCase()}
+              </Btn>
+            </div>
+          }
+        >
+          <Row>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Account</div>
+              <div style={{ fontFamily: "ui-monospace", fontSize: 12 }}>
+                {accountId || "-"}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>User</div>
+              <div style={{ fontFamily: "ui-monospace", fontSize: 12 }}>
+                {userId || "-"}
+              </div>
+            </div>
+          </Row>
+
+          <Divider />
+
+          <Row>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Usage</div>
+              <div style={{ fontWeight: 900 }}>
+                {badge.used}/{badge.limit}
+                {plan === "PRO" ? (
+                  <span style={{ opacity: 0.8, fontWeight: 700 }}>
+                    {" "}
+                    · Boost {badge.boostUsed}/{badge.boostLimit}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Reset am</div>
+              <div style={{ fontWeight: 900 }}>
+                {formatDate(badge.renewAt, outLang)}
+              </div>
+              {badge.cancelAt ? (
+                <div style={{ fontSize: 12, opacity: 0.75 }}>
+                  gekündigt zum {formatDate(badge.cancelAt, outLang)}
+                </div>
+              ) : null}
+            </div>
+          </Row>
+
+          <Divider />
+
+          <div style={{ fontSize: 12, opacity: 0.85 }}>
+            Health: <b>{health?._status ?? "-"}</b> · Me:{" "}
+            <b>{me?.ok ? "200" : "-"}</b> · Stripe:{" "}
+            <b>{health?.stripe ? "ON" : "OFF"}</b> ({health?.stripeMode || "-"})
+          </div>
+        </Card>
+
+        {/* BYOK */}
+        <Card
+          title="OpenAI API-Key (BYOK)"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={() => setByokVisible((p) => !p)}>
+                {byokVisible ? "Ausblenden" : "Anzeigen"}
+              </Btn>
+              <Btn onClick={() => testByokKey()} disabled={!byokKey.trim()}>
+                Testen
+              </Btn>
+            </div>
+          }
+        >
+          <Label>Key (lokal gespeichert)</Label>
+          <Input
+            type={byokVisible ? "text" : "password"}
+            value={byokKey}
+            onChange={saveByokKey}
+            placeholder="sk-..."
+          />
+          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
+            Hinweis: Ohne BYOK kann FREE nicht generieren. PRO kann (wenn aktiv)
+            über Server-Credits laufen.
+          </div>
+        </Card>
+
+        {/* Generator */}
+        <Card
+          title="Generator"
+          right={
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label
                 style={{
                   display: "flex",
-                  gap: 6,
-                  border: "1px solid #202230",
-                  borderRadius: 999,
-                  padding: 4,
+                  gap: 8,
+                  alignItems: "center",
+                  fontSize: 12,
                 }}
               >
-                <button
-                  style={{
-                    ...btn,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    background:
-                      uiLang === "de" ? "rgba(20,83,45,.25)" : "#0f1118",
-                    fontWeight: uiLang === "de" ? 900 : 600,
-                  }}
-                  onClick={() => setUiLang("de")}
-                  type="button"
-                >
-                  DE
-                </button>
-                <button
-                  style={{
-                    ...btn,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    background:
-                      uiLang === "en" ? "rgba(20,83,45,.25)" : "#0f1118",
-                    fontWeight: uiLang === "en" ? 900 : 600,
-                  }}
-                  onClick={() => setUiLang("en")}
-                  type="button"
-                >
-                  EN
-                </button>
+                <input
+                  type="checkbox"
+                  checked={boost}
+                  onChange={(e) => setBoost(e.target.checked)}
+                  disabled={plan !== "PRO"}
+                />
+                <span style={{ opacity: plan !== "PRO" ? 0.6 : 1 }}>
+                  Quality Boost{" "}
+                  <span style={{ opacity: 0.75 }}>(Mehr Tiefe)</span>
+                </span>
+              </label>
+              <Btn kind="primary" onClick={() => generate()} disabled={loading}>
+                {loading ? "Generiere…" : "Prompt generieren"}
+              </Btn>
+            </div>
+          }
+        >
+          <Row>
+            <div>
+              <Label>Anwendungsfall</Label>
+              <select
+                value={useCaseSel}
+                onChange={(e) => setUseCaseSel(e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 12,
+                  border: "1px solid #202230",
+                  background: "#0f1118",
+                  color: "#e7e7ff",
+                  padding: "10px 12px",
+                  outline: "none",
+                }}
+              >
+                {useCases.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+              {useCaseSel === "Sonstiges (Custom)" ? (
+                <div style={{ marginTop: 8 }}>
+                  <Input
+                    value={useCaseCustom}
+                    onChange={setUseCaseCustom}
+                    placeholder="Eigener Anwendungsfall…"
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            <div>
+              <Label>Ton</Label>
+              <select
+                value={toneSel}
+                onChange={(e) => setToneSel(e.target.value)}
+                style={{
+                  width: "100%",
+                  borderRadius: 12,
+                  border: "1px solid #202230",
+                  background: "#0f1118",
+                  color: "#e7e7ff",
+                  padding: "10px 12px",
+                  outline: "none",
+                }}
+              >
+                {tones.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              {toneSel === "Sonstiges (Custom)" ? (
+                <div style={{ marginTop: 8 }}>
+                  <Input
+                    value={toneCustom}
+                    onChange={setToneCustom}
+                    placeholder="Eigener Ton…"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </Row>
+
+          <div style={{ height: 12 }} />
+
+          <Label>Thema / Kontext</Label>
+          <TextArea
+            value={topic}
+            onChange={setTopic}
+            rows={3}
+            placeholder="Worum geht es genau?"
+          />
+
+          <div style={{ height: 12 }} />
+
+          <Label>Extra Hinweise (z.B. „3 Varianten, Hook + CTA“)</Label>
+          <TextArea
+            value={extra}
+            onChange={setExtra}
+            rows={3}
+            placeholder="Optional…"
+          />
+
+          <div style={{ height: 12 }} />
+
+          <Row>
+            <div>
+              <Label>Output-Sprache</Label>
+              <select
+                value={outLang}
+                onChange={(e) =>
+                  setOutLang(e.target.value === "en" ? "en" : "de")
+                }
+                style={{
+                  width: "100%",
+                  borderRadius: 12,
+                  border: "1px solid #202230",
+                  background: "#0f1118",
+                  color: "#e7e7ff",
+                  padding: "10px 12px",
+                  outline: "none",
+                }}
+              >
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div>
+              <Label>Billing</Label>
+              <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.5 }}>
+                {MAINTENANCE_BILLING_OFF ? (
+                  <>
+                    <b>Wartung (UI Lock)</b> – Checkout/Portal ist deaktiviert.
+                  </>
+                ) : (
+                  <>
+                    <b>Aktiv</b> – Checkout/Portal verfügbar.
+                  </>
+                )}
               </div>
             </div>
-          </div>
+          </Row>
 
-          <div style={{ marginTop: 10, ...row }}>
-            <span style={pill(backendStatus === "ok")}>
-              ● {t.backend}:{" "}
-              {backendStatus === "ok"
-                ? "OK"
-                : backendStatus === "down"
-                ? "DOWN"
-                : "…"}
-            </span>
-            <span style={pill(true)}>
-              ● {t.byok}: {byokOnly ? "BYOK-only" : "BYOK + PRO"}
-            </span>
-            <span style={pill(true)}>
-              ● {t.plan}: {isPro ? t.planPro : t.planFree}{" "}
-              {renewText ? `· ${renewText}` : ""}
-            </span>
-            {!!stripeExtra && (
-              <span style={pill(true)}>
-                ● {t.stripeLabel}: {stripeExtra}
-              </span>
-            )}
-          </div>
-
-          <div style={{ marginTop: 12, ...row }}>
-            <button style={primaryBtn} onClick={openCheckout} type="button">
-              {t.checkoutOpen}
-            </button>
-            <button style={btn} onClick={openBillingPortal} type="button">
-              {t.manage}
-            </button>
-            <button style={btn} onClick={() => syncCheckout()} type="button">
-              {t.sync}
-            </button>
-            <button
-              style={btn}
-              onClick={() => setShowRestoreModal(true)}
-              type="button"
-            >
-              {t.restore}
-            </button>
-            {!isPro && (
-              <button
-                style={btn}
-                onClick={() => setShowProModal(true)}
-                type="button"
-              >
-                {t.getPro}
-              </button>
-            )}
-          </div>
-
-          {!!error && (
+          {err ? (
             <div
               style={{
                 marginTop: 12,
-                padding: 10,
-                borderRadius: 12,
-                border: "1px solid #3b1d1d",
-                background: "rgba(185,28,28,.12)",
-                fontSize: 12,
-                whiteSpace: "pre-wrap",
+                color: "#ffb3b3",
+                fontSize: 13,
+                fontWeight: 800,
               }}
             >
-              {error}
+              {err}
             </div>
-          )}
-
-          {!!toastMsg && (
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.95 }}>
-              {toastMsg}
-            </div>
-          )}
-        </div>
-
-        {/* API Key */}
-        <div style={card}>
-          <div style={{ fontWeight: 900 }}>{t.apiKeyTitle}</div>
-          <div style={{ marginTop: 10 }}>
-            <input
-              style={input}
-              type={showKey ? "text" : "password"}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-            />
-          </div>
-
-          <div style={{ marginTop: 10, ...row }}>
-            <button
-              style={btn}
-              onClick={() => setShowKey((s) => !s)}
-              type="button"
-            >
-              {showKey ? t.hide : t.show}
-            </button>
-            <button style={btn} onClick={testKey} type="button">
-              {t.test}
-            </button>
-
-            {keyStatus !== "idle" && (
-              <span style={pill(keyStatus === "ok")}>
-                ● {keyStatus.toUpperCase()} {keyMsg ? `· ${keyMsg}` : ""}
-              </span>
-            )}
-          </div>
-
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
-            {byokOnly ? t.keyHintByokOnly : t.keyHintNoKey}
-          </div>
-        </div>
-
-        {/* Generator */}
-        <form style={card} onSubmit={onGenerate}>
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>Generator</div>
-
-          <div
-            style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}
-          >
-            <div>
-              <div style={label}>{t.useCase}</div>
-              <SelectBox
-                value={useCaseKey}
-                onChange={setUseCaseKey}
-                options={USE_CASES}
-                dataAttr="usecase"
-              />
-              {useCaseKey === "custom" && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={label}>{t.customUseCase}</div>
-                  <input
-                    style={input}
-                    value={useCaseCustom}
-                    onChange={(e) => setUseCaseCustom(e.target.value)}
-                    placeholder={
-                      uiLang === "de"
-                        ? "z.B. Webinar-Skript"
-                        : "e.g. webinar script"
-                    }
-                  />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div style={label}>{t.tone}</div>
-              <SelectBox
-                value={toneKey}
-                onChange={setToneKey}
-                options={TONES}
-                dataAttr="tone"
-              />
-              {toneKey === "custom" && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={label}>{t.customTone}</div>
-                  <input
-                    style={input}
-                    value={toneCustom}
-                    onChange={(e) => setToneCustom(e.target.value)}
-                    placeholder={
-                      uiLang === "de" ? "z.B. frech, edgy" : "e.g. bold, edgy"
-                    }
-                  />
-                </div>
-              )}
-            </div>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={label}>{t.outputLang}</div>
-              <div style={{ ...row, gap: 6 }}>
-                <button
-                  type="button"
-                  style={{
-                    ...btn,
-                    padding: "8px 10px",
-                    background:
-                      outLang === "de" ? "rgba(20,83,45,.25)" : "#0f1118",
-                    fontWeight: outLang === "de" ? 900 : 600,
-                  }}
-                  onClick={() => setOutLang("de")}
-                >
-                  DE
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    ...btn,
-                    padding: "8px 10px",
-                    background:
-                      outLang === "en" ? "rgba(20,83,45,.25)" : "#0f1118",
-                    fontWeight: outLang === "en" ? 900 : 600,
-                  }}
-                  onClick={() => setOutLang("en")}
-                >
-                  EN
-                </button>
-              </div>
-            </div>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={label}>{t.topic}</div>
-              <input
-                style={input}
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder={
-                  uiLang === "de"
-                    ? "z.B. Produktlaunch, Angebot, Thema…"
-                    : "e.g. product launch, offer, topic…"
-                }
-              />
-            </div>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={label}>{t.extra}</div>
-              <input
-                style={input}
-                value={extra}
-                onChange={(e) => setExtra(e.target.value)}
-                placeholder={
-                  uiLang === "de"
-                    ? "z.B. Zielgruppe, Stil, CTA…"
-                    : "e.g. audience, style, CTA…"
-                }
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: 12, ...row }}>
-            <button
-              type="button"
-              style={{
-                ...btn,
-                border: boost ? "1px solid #244d2f" : "1px solid #202230",
-                background: boost ? "rgba(20,83,45,.22)" : "#0f1118",
-                fontWeight: boost ? 900 : 600,
-              }}
-              onClick={() => setBoost((b) => !b)}
-              title={t.boostHint}
-            >
-              {t.boost}: {boost ? "ON" : "OFF"}
-            </button>
-
-            <button type="submit" style={primaryBtn} disabled={isGenerating}>
-              {isGenerating ? t.generating : t.generate}
-            </button>
-
-            <span style={{ opacity: 0.8, fontSize: 12 }}>
-              Model: {boost ? models.boost : isPro ? models.pro : models.byok}
-            </span>
-
-            <span style={{ opacity: 0.8, fontSize: 12 }}>
-              Usage: {used}/{limit} ({progress}%)
-            </span>
-          </div>
-        </form>
+          ) : null}
+        </Card>
 
         {/* Output */}
-        <div style={card}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontWeight: 900 }}>{t.outputTitle}</div>
-            <button style={btn} onClick={copyOutput} type="button">
-              {t.copy}
-            </button>
-          </div>
-
-          <textarea
-            ref={outputRef}
-            style={{
-              ...input,
-              marginTop: 10,
-              minHeight: 160,
-              resize: "vertical",
-            }}
+        <Card
+          title="Output"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={copyOutput} disabled={!output.trim()}>
+                Kopieren
+              </Btn>
+              <Btn onClick={() => setOutput("")} disabled={!output.trim()}>
+                Leeren
+              </Btn>
+            </div>
+          }
+        >
+          <TextArea
             value={output}
-            readOnly
-            placeholder={
-              uiLang === "de"
-                ? "Hier erscheint dein Output…"
-                : "Your output will appear here…"
-            }
+            onChange={setOutput}
+            rows={10}
+            placeholder="Hier erscheint der Master-Prompt…"
           />
-        </div>
+        </Card>
 
         {/* History */}
-        <div style={card}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontWeight: 900 }}>{t.historyTitle}</div>
-            <button style={btn} onClick={clearHistory} type="button">
-              {t.clearHistory}
-            </button>
-          </div>
-
-          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-            {history.length === 0 ? (
-              <div style={{ opacity: 0.75, fontSize: 12 }}>
-                {uiLang === "de" ? "Noch keine Einträge." : "No entries yet."}
-              </div>
-            ) : (
-              history.map((h) => (
+        <Card
+          title="History"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={clearHistory} disabled={history.length === 0}>
+                History löschen
+              </Btn>
+            </div>
+          }
+        >
+          {history.length === 0 ? (
+            <div style={{ fontSize: 12, opacity: 0.75 }}>
+              Noch keine Einträge.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {history.slice(0, 12).map((h) => (
                 <div
-                  key={h.id}
+                  key={h.ts}
                   style={{
                     border: "1px solid #202230",
                     borderRadius: 14,
-                    padding: 12,
                     background: "#0f1118",
+                    padding: 12,
                   }}
                 >
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    {new Date(h.timestamp).toLocaleString()} · {h.useCase} ·{" "}
-                    {h.tone} · {h.outLang.toUpperCase()} · Boost:{" "}
-                    {h.boost ? "ON" : "OFF"}
-                  </div>
-                  <div style={{ marginTop: 8, fontWeight: 900 }}>
-                    {h.topic || "(no topic)"}
-                  </div>
-                  {h.extra ? (
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                      {h.extra}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ fontWeight: 900, fontSize: 13 }}>
+                      {h.useCase} · {h.tone} · {h.outLang.toUpperCase()}
+                      {h.boost ? " · BOOST" : ""}
                     </div>
-                  ) : null}
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>
+                      {formatDate(h.ts, outLang)}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+                    {h.topic}
+                  </div>
                   <div
                     style={{
                       marginTop: 10,
-                      whiteSpace: "pre-wrap",
-                      lineHeight: 1.45,
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
                     }}
                   >
-                    {h.result}
+                    <Btn onClick={() => setOutput(h.output)}>In Output</Btn>
+                    <Btn
+                      onClick={() =>
+                        navigator.clipboard
+                          .writeText(h.output)
+                          .then(() => alert("Kopiert ✅"))
+                          .catch(() => alert("Copy fehlgeschlagen"))
+                      }
+                    >
+                      Copy
+                    </Btn>
                   </div>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Restore */}
+        <Card title="Account wiederherstellen">
+          <Row>
+            <div>
+              <Label>AccountId</Label>
+              <Input
+                value={restoreAcc}
+                onChange={setRestoreAcc}
+                placeholder="acc_..."
+              />
+            </div>
+            <div>
+              <Label>UserId (optional)</Label>
+              <Input
+                value={restoreUser}
+                onChange={setRestoreUser}
+                placeholder="usr_..."
+              />
+            </div>
+          </Row>
+          <div style={{ marginTop: 10 }}>
+            <Btn onClick={() => restoreAccount(restoreAcc, restoreUser)}>
+              Restore
+            </Btn>
           </div>
+        </Card>
+
+        {/* Footer actions */}
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <Btn
+            disabled={MAINTENANCE_BILLING_OFF}
+            onClick={() => openCheckout()}
+            title={MAINTENANCE_BILLING_OFF ? "Billing deaktiviert" : undefined}
+          >
+            Checkout öffnen
+          </Btn>
+          <Btn
+            disabled={MAINTENANCE_BILLING_OFF}
+            onClick={() => openBillingPortal()}
+            title={MAINTENANCE_BILLING_OFF ? "Billing deaktiviert" : undefined}
+          >
+            Abo verwalten
+          </Btn>
+          <Btn
+            onClick={() => {
+              setShowPro(true);
+            }}
+          >
+            PRO Info
+          </Btn>
         </div>
       </div>
 
-      {/* Modals */}
-      {showProModal && (
-        <Modal
-          title={t.proModalTitle}
-          onClose={() => setShowProModal(false)}
-          closeLabel={t.close}
-        >
+      {/* PRO Modal */}
+      {showPro ? (
+        <Modal title="GLE PRO" closeLabel="✕" onClose={() => setShowPro(false)}>
           <div
-            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
+            style={{ whiteSpace: "pre-wrap", lineHeight: 1.5, opacity: 0.92 }}
           >
-            {t.proModalText}
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <button
-              style={btn}
-              onClick={() => setShowProModal(false)}
-              type="button"
-            >
-              {t.later}
-            </button>
-            <button style={primaryBtn} onClick={openCheckout} type="button">
-              {t.getPro}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {showRestoreModal && (
-        <Modal
-          title={t.restoreTitle}
-          onClose={() => setShowRestoreModal(false)}
-          closeLabel={t.close}
-        >
-          <div
-            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
-          >
-            {t.restoreText}
-          </div>
-
-          <div style={{ marginTop: 12 }}>
-            <div style={label}>{t.sessionIdLabel}</div>
-            <input
-              style={input}
-              value={restoreSessionId}
-              onChange={(e) => setRestoreSessionId(e.target.value)}
-              placeholder="cs_live_... / cs_test_..."
-            />
+            {proText}
           </div>
 
           <div
@@ -1676,58 +1257,26 @@ export default function Page() {
               marginTop: 14,
               display: "flex",
               gap: 10,
-              flexWrap: "wrap",
+              justifyContent: "flex-end",
             }}
           >
-            <button
-              style={btn}
-              onClick={() => syncCheckout(restoreSessionId)}
-              type="button"
+            <Btn onClick={() => setShowPro(false)}>Später</Btn>
+            <Btn
+              kind="primary"
+              disabled={MAINTENANCE_BILLING_OFF}
+              onClick={() => {
+                if (blockBillingIfMaintenance()) return;
+                openCheckout();
+              }}
+              title={
+                MAINTENANCE_BILLING_OFF ? "Billing deaktiviert" : undefined
+              }
             >
-              {t.restoreSync}
-            </button>
-            <button style={primaryBtn} onClick={openCheckout} type="button">
-              {t.restoreCheckout}
-            </button>
-          </div>
-
-          {!!lastSessionId && (
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
-              last session_id: {lastSessionId}
-            </div>
-          )}
-        </Modal>
-      )}
-
-      {showMissingIdsModal && (
-        <Modal
-          title={t.missingIdsTitle}
-          onClose={() => setShowMissingIdsModal(false)}
-          closeLabel={t.close}
-        >
-          <div
-            style={{ whiteSpace: "pre-wrap", opacity: 0.92, lineHeight: 1.5 }}
-          >
-            {t.missingIdsText}
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <button
-              style={primaryBtn}
-              onClick={() => setShowMissingIdsModal(false)}
-              type="button"
-            >
-              {t.ok}
-            </button>
+              Jetzt PRO holen
+            </Btn>
           </div>
         </Modal>
-      )}
+      ) : null}
     </main>
   );
 }
