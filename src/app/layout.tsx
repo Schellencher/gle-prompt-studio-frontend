@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import MaintenanceBanner from "../components/MaintenanceBanner";
 
 export const metadata: Metadata = {
   title: "GLE Prompt Studio — GetLaunchEdge Prompt Studio",
@@ -17,9 +18,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const maintenanceEnabled =
+    String(process.env.MAINTENANCE_MODE || "").trim() === "1";
+
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        <MaintenanceBanner enabled={maintenanceEnabled} />
+        {children}
+      </body>
     </html>
   );
 }
