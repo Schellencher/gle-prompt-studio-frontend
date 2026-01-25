@@ -1,12 +1,23 @@
-/* Globale Styles für PromptForge-Frontend */
+/* =========================
+   GLE Prompt Studio — globals.css
+   Premium dark + glass cards + PRO badge shimmer
+========================= */
 
 :root {
   color-scheme: dark;
+  --bg: #050608;
+  --panel: rgba(18, 18, 24, 0.7);
+  --panel2: rgba(15, 16, 22, 0.8);
+  --border: rgba(255, 255, 255, 0.08);
+  --border2: rgba(255, 255, 255, 0.12);
+  --text: #e9f6ff;
+  --muted: rgba(233, 246, 255, 0.65);
+  --accent: #00e676;
+  --warn: rgba(255, 140, 0, 0.12);
+  --warnBorder: rgba(255, 140, 0, 0.35);
 }
 
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
 }
 
@@ -14,299 +25,456 @@ html,
 body {
   margin: 0;
   padding: 0;
-  min-height: 100%;
+  background: radial-gradient(
+      1200px 500px at 30% -10%,
+      rgba(99, 102, 241, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px 600px at 90% 10%,
+      rgba(168, 85, 247, 0.12),
+      transparent 55%
+    ),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Arial, sans-serif;
+  letter-spacing: -0.01em;
 }
 
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  background: #050608;
-  color: #f5f5f7;
-}
-@media (max-width: 900px) {
-  .gleGrid {
-    grid-template-columns: 1fr !important;
-  }
+a {
+  color: inherit;
 }
 
-.progressWrap {
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Layout */
+.appShell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px;
 }
 
-.progressTrack {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
-  position: relative;
-}
-
-.progressFill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #00e676, #00e676 55%, #ff7043);
-  box-shadow: 0 0 16px rgba(0, 230, 118, 0.6);
-  transition: width 120ms ease;
-  position: relative;
-}
-
-.progressFill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-60%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.22),
-    transparent
-  );
-  animation: shine 1.05s ease-in-out infinite;
-  opacity: 0.65;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-70%);
-  }
-  100% {
-    transform: translateX(70%);
-  }
-}
-
-.progressMeta {
-  margin-top: 8px;
+.topBar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%);
-  padding: 10px 14px;
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandTitle {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.langPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.82);
-  border: 1px solid rgba(0, 230, 118, 0.35);
-  box-shadow: 0 0 20px rgba(0, 230, 118, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+}
+
+.pillBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 800;
-  z-index: 9999;
 }
-@media (max-width: 900px) {
-  .gleGrid {
-    grid-template-columns: 1fr !important;
-  }
-  main {
-    padding: 1rem !important;
-  }
+.pillActive {
+  color: var(--text);
+  border-color: var(--border2);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.progressWrap {
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.grid3 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
 }
-
-.progressTrack {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
-  position: relative;
-}
-
-.progressFill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #00e676, #00e676 55%, #ff7043);
-  box-shadow: 0 0 16px rgba(0, 230, 118, 0.6);
-  transition: width 120ms ease;
-  position: relative;
-}
-
-.progressFill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-60%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.22),
-    transparent
-  );
-  animation: shine 1.05s ease-in-out infinite;
-  opacity: 0.65;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-70%);
-  }
-  100% {
-    transform: translateX(70%);
+@media (min-width: 980px) {
+  .grid3 {
+    grid-template-columns: 340px 1fr 380px;
+    align-items: start;
   }
 }
 
-.progressMeta {
-  margin-top: 8px;
+/* Cards */
+.card {
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
+}
+
+.cardHeader {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.statsLine {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
-  line-height: 1.35;
+.cardTitle {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-size: 15px;
 }
 
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%);
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.82);
-  border: 1px solid rgba(0, 230, 118, 0.35);
-  box-shadow: 0 0 20px rgba(0, 230, 118, 0.18);
-  font-size: 12px;
-  font-weight: 800;
-  z-index: 9999;
-}
-@media (max-width: 900px) {
-  .gleGrid {
-    grid-template-columns: 1fr !important;
-  }
-  .gleMain {
-    padding: 1rem !important;
-  }
-}
-
-.gleLabel {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  color: #8a8fa3;
-}
-
-.gleSelect {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid #333647;
-  background: #050608;
-  color: #f5f5f7;
-}
-
-.gleTextarea {
-  width: 100%;
-  border-radius: 0.75rem;
-  border: 1px solid #333647;
-  padding: 0.75rem;
-  resize: none;
-  background: #050608;
-  color: #f5f5f7;
-  font-size: 0.9rem;
-}
-
-.gleChips {
+.rightMeta {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.subCard {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.subTitle {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+/* Key-value */
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+}
+.k {
+  color: var(--muted);
+  font-size: 12px;
+}
+.v {
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+/* Buttons */
+.btnRow {
+  display: inline-flex;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
+  align-items: center;
 }
 
-.gleChipBtn {
-  border-radius: 999px;
-  border: 1px solid #333647;
-  padding: 0.25rem 0.6rem;
-  background: #050608;
-  color: #cfd2dc;
+.btn {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btnPrimary {
+  border-color: rgba(0, 230, 118, 0.25);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+.btnGhost {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.linkBtn {
+  background: transparent;
+  border: none;
+  color: rgba(233, 246, 255, 0.7);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  text-decoration: underline;
+}
+.linkBtn:hover {
+  color: rgba(233, 246, 255, 0.9);
+}
+
+.footerLinkRow {
+  margin-top: 12px;
+}
+
+/* Inputs */
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(233, 246, 255, 0.75);
+  margin-bottom: 6px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  padding: 10px 12px;
+  outline: none;
+  font-size: 13px;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.hint {
+  font-size: 12px;
+  color: rgba(233, 246, 255, 0.7);
+  line-height: 1.5;
+}
+
+/* Generator form grid */
+.formGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 700px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .span2 {
+    grid-column: span 2;
+  }
+  .btnSlot {
+    display: flex;
+    align-items: end;
+    justify-content: flex-end;
+  }
+}
+
+/* Output */
+.outputBox {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px;
+  min-height: 220px;
+}
+
+.pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.placeholder {
+  color: rgba(233, 246, 255, 0.55);
+  font-size: 13px;
+}
+
+/* History */
+.historyList {
+  display: grid;
+  gap: 8px;
+}
+
+.historyItem {
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 10px 12px;
   cursor: pointer;
 }
 
-.progressWrap {
-  padding: 10px 12px;
+.historyItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.historyTop {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.historyTopic {
+  font-size: 13px;
+  color: rgba(233, 246, 255, 0.85);
+}
+
+/* Notices */
+.noticeWarn {
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  border: 1px solid var(--warnBorder);
+  background: var(--warn);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.progressTrack {
-  height: 10px;
+/* Badges */
+.free-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
-  position: relative;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.06em;
 }
 
-.progressFill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #00e676, #00e676 55%, #ff7043);
-  background-size: 200% 100%;
-  animation: gleShimmer 1.1s linear infinite;
-  box-shadow: 0 0 16px rgba(0, 230, 118, 0.55);
-  transition: width 120ms ease;
-}
-
-@keyframes gleShimmer {
+@keyframes shimmer {
   0% {
-    background-position: 0% 0%;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
   100% {
-    background-position: 100% 0%;
+    background-position: 0% 50%;
   }
 }
 
-.progressMeta {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: linear-gradient(-45deg, #6366f1, #a855f7, #ec4899);
+  background-size: 200% 200%;
+  animation: shimmer 3s ease infinite;
+  color: white;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.statsLine {
-  margin-top: 10px;
-  padding: 10px 12px;
+.pro-badge .star {
+  font-size: 12px;
+}
+
+/* Switch row */
+.switchRow {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(233, 246, 255, 0.8);
+}
+.switchRow input {
+  transform: translateY(1px);
+}
+
+/* Debug */
+.debugBox {
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
-  line-height: 1.35;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 12px;
 }
 
-.gleToast {
+/* Toast */
+.toast {
   position: fixed;
   left: 50%;
-  bottom: 20px;
+  top: 14px;
   transform: translateX(-50%);
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.82);
-  border: 1px solid rgba(0, 230, 118, 0.35);
-  box-shadow: 0 0 20px rgba(0, 230, 118, 0.18);
+  z-index: 999999;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
-  z-index: 9999;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  z-index: 999999;
+}
+
+.modalCard {
+  width: min(680px, 96vw);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(12, 13, 18, 0.92);
+  backdrop-filter: blur(12px);
+  padding: 14px;
+  color: var(--text);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modalTitle {
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }

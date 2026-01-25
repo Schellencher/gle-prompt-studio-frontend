@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
 import MaintenanceBanner from "../components/MaintenanceBanner";
+import EnvStatusPill from "../components/EnvStatusPill";
 
 export const metadata: Metadata = {
   title: "GLE Prompt Studio — GetLaunchEdge Prompt Studio",
@@ -24,7 +26,12 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body>
+        {/* Status immer sichtbar: LIVE/MAINTENANCE + PUBLIC/BYPASS */}
+        <EnvStatusPill maintenanceEnabled={maintenanceEnabled} />
+
+        {/* Banner nur wenn Wartung AN + Bypass aktiv */}
         <MaintenanceBanner enabled={maintenanceEnabled} />
+
         {children}
       </body>
     </html>

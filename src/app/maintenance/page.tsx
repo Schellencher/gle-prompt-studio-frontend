@@ -1,4 +1,63 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+
+function getCookie(name: string) {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return m ? decodeURIComponent(m[2]) : "";
+}
+
 export default function Maintenance() {
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [token, setToken] = useState("");
+  const [bypassSeen, setBypassSeen] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    try {
+      const ls = window.localStorage.getItem("gle_bypass_active") === "1";
+      const ui = getCookie("gle_bypass_ui") === "1";
+      setBypassSeen(ls || ui);
+    } catch {
+      setBypassSeen(false);
+    }
+
+    // Statusmeldung nach Reset + URL säubern
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("resetBypass") === "1" || sp.get("bypass") === "0") {
+      setMsg("Bypass wurde gelöscht.");
+      sp.delete("resetBypass");
+      sp.delete("bypass");
+      const qs = sp.toString();
+      window.history.replaceState(
+        {},
+        "",
+        qs ? `/maintenance?${qs}` : "/maintenance"
+      );
+    }
+  }, []);
+
+  function startBypass() {
+    const t = token.trim();
+    if (!t) {
+      setMsg("Bitte Token eingeben.");
+      return;
+    }
+    try {
+      window.localStorage.setItem("gle_bypass_active", "1"); // nur fürs UI
+    } catch {}
+    window.location.href = `/?bypass=${encodeURIComponent(t)}`; // Middleware setzt Cookie
+  }
+
+  function clearBypass() {
+    try {
+      window.localStorage.removeItem("gle_bypass_active");
+    } catch {}
+    // Middleware muss Cookies löschen (siehe Patch unten)
+    window.location.href = "/maintenance?resetBypass=1";
+  }
+
   return (
     <div
       style={{
@@ -6,22 +65,207 @@ export default function Maintenance() {
         display: "grid",
         placeItems: "center",
         padding: 16,
+        background: "#fafafa",
       }}
     >
       <div
         style={{
-          maxWidth: 520,
+          maxWidth: 560,
           width: "100%",
-          border: "1px solid #333",
-          borderRadius: 16,
+          border: "1px solid #e4e4e7",
+          borderRadius: 18,
           padding: 24,
+          background: "white",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
         }}
       >
-        <h1 style={{ fontSize: 22, margin: 0 }}>🚧 Update / Wartung</h1>
-        <p style={{ opacity: 0.8, marginTop: 10 }}>
-          Die App ist gerade nicht öffentlich erreichbar. Bitte später erneut
-          versuchen.
-        </p>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
+          <div>
+            <h1 style={{ fontSize: 22, margin: 0, color: "#111827" }}>
+              🚧 Wartung aktiv
+            </h1>
+            <p style={{ opacity: 0.8, marginTop: 10, color: "#4b5563" }}>
+              Die App ist gerade nicht öffentlich erreichbar. Bitte später
+              erneut versuchen.
+            </p>
+          </div>
+
+          <div
+            style={{
+              height: 28,
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid",
+              borderColor: bypassSeen ? "#a7f3d0" : "#fde68a",
+              background: bypassSeen ? "#ecfdf5" : "#fffbeb",
+              color: bypassSeen ? "#047857" : "#92400e",
+              fontSize: 12,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {bypassSeen ? "Bypass aktiv" : "Öffentlich gesperrt"}
+          </div>
+        </div>
+
+        {msg ? (
+          <div
+            style={{
+              marginTop: 14,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid #e4e4e7",
+              background: "#f4f4f5",
+              color: "#111827",
+              fontSize: 13,
+            }}
+          >
+            {msg}
+          </div>
+        ) : null}
+
+        <div
+          style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}
+        >
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              borderRadius: 12,
+              padding: "10px 14px",
+              border: "1px solid #111827",
+              background: "#111827",
+              color: "white",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Neu laden
+          </button>
+
+          <a
+            href="/"
+            style={{
+              borderRadius: 12,
+              padding: "10px 14px",
+              border: "1px solid #e4e4e7",
+              background: "white",
+              color: "#111827",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Status prüfen
+          </a>
+
+          <button
+            onClick={clearBypass}
+            title="Entfernt den Bypass (ohne Site-Data löschen)"
+            style={{
+              borderRadius: 12,
+              padding: "10px 14px",
+              border: "1px solid #e4e4e7",
+              background: "white",
+              color: "#111827",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Bypass löschen
+          </button>
+
+          <button
+            onClick={() => setAdminOpen((v) => !v)}
+            style={{
+              marginLeft: "auto",
+              borderRadius: 12,
+              padding: "10px 14px",
+              border: "1px solid #e4e4e7",
+              background: "#f4f4f5",
+              color: "#111827",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {adminOpen ? "Admin schließen" : "Admin-Zugang"}
+          </button>
+        </div>
+
+        {adminOpen ? (
+          <div
+            style={{
+              marginTop: 16,
+              padding: 14,
+              borderRadius: 16,
+              border: "1px solid #e4e4e7",
+              background: "white",
+            }}
+          >
+            <div style={{ fontWeight: 700, color: "#111827" }}>
+              Admin Bypass
+            </div>
+            <div style={{ marginTop: 6, fontSize: 13, color: "#4b5563" }}>
+              Token eingeben → du wirst ins Studio weitergeleitet.
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <input
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="bypass token…"
+                style={{
+                  flex: "1 1 240px",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  border: "1px solid #e4e4e7",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={startBypass}
+                style={{
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  border: "1px solid #111827",
+                  background: "#111827",
+                  color: "white",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Bypass aktivieren
+              </button>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 12, color: "#6b7280" }}>
+              Hinweis: Token nie öffentlich teilen.
+            </div>
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            marginTop: 18,
+            textAlign: "center",
+            fontSize: 12,
+            color: "#6b7280",
+          }}
+        >
+          Support:{" "}
+          <span style={{ color: "#374151", fontWeight: 600 }}>
+            support@getlaunchedge.com
+          </span>
+        </div>
       </div>
     </div>
   );
