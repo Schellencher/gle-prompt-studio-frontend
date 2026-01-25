@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
@@ -9,12 +9,24 @@ function getCookie(name: string) {
 }
 
 export default function Maintenance() {
-  const [adminOpen, setAdminOpen] = useState(false);
   const [token, setToken] = useState("");
   const [bypassSeen, setBypassSeen] = useState(false);
   const [msg, setMsg] = useState("");
+  const [adminUIEnabled, setAdminUIEnabled] = useState(false);
+
+  const resetUrl = useMemo(() => "/maintenance?resetBypass=1", []);
+  const goStudioUrl = useMemo(() => "/", []);
 
   useEffect(() => {
+    // Admin UI nur per HASH aktiv (damit es NIEMALS „aus Versehen“ aktiv ist)
+    try {
+      const hash = (window.location.hash || "").toLowerCase();
+      setAdminUIEnabled(hash === "#admin");
+    } catch {
+      setAdminUIEnabled(false);
+    }
+
+    // Bypass-Indizien (nur fürs Badge)
     try {
       const ls = window.localStorage.getItem("gle_bypass_active") === "1";
       const ui = getCookie("gle_bypass_ui") === "1";
@@ -23,19 +35,22 @@ export default function Maintenance() {
       setBypassSeen(false);
     }
 
-    // Statusmeldung nach Reset + URL säubern
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.get("resetBypass") === "1" || sp.get("bypass") === "0") {
-      setMsg("Bypass wurde gelöscht.");
-      sp.delete("resetBypass");
-      sp.delete("bypass");
-      const qs = sp.toString();
-      window.history.replaceState(
-        {},
-        "",
-        qs ? `/maintenance?${qs}` : "/maintenance"
-      );
-    }
+    // Statusmeldung nach Reset + URL säubern (hash beibehalten)
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("resetBypass") === "1" || sp.get("bypass") === "0") {
+        setMsg("Bypass wurde gelöscht.");
+        sp.delete("resetBypass");
+        sp.delete("bypass");
+        const qs = sp.toString();
+        const hash = window.location.hash || "";
+        window.history.replaceState(
+          {},
+          "",
+          qs ? `/maintenance?${qs}${hash}` : `/maintenance${hash}`
+        );
+      }
+    } catch {}
   }, []);
 
   function startBypass() {
@@ -44,18 +59,19 @@ export default function Maintenance() {
       setMsg("Bitte Token eingeben.");
       return;
     }
+    setMsg("");
     try {
-      window.localStorage.setItem("gle_bypass_active", "1"); // nur fürs UI
+      window.localStorage.setItem("gle_bypass_active", "1"); // optional fürs UI
     } catch {}
-    window.location.href = `/?bypass=${encodeURIComponent(t)}`; // Middleware setzt Cookie
+    window.location.href = `/?bypass=${encodeURIComponent(t)}`;
   }
 
   function clearBypass() {
     try {
       window.localStorage.removeItem("gle_bypass_active");
+      window.localStorage.removeItem("gle_maintenance_banner_closed");
     } catch {}
-    // Middleware muss Cookies löschen (siehe Patch unten)
-    window.location.href = "/maintenance?resetBypass=1";
+    window.location.href = resetUrl;
   }
 
   return (
@@ -68,6 +84,23 @@ export default function Maintenance() {
         background: "#fafafa",
       }}
     >
+      <div
+        style={{
+          position: "fixed",
+          top: 14,
+          right: 14,
+          borderRadius: 999,
+          border: "1px solid #e4e4e7",
+          background: "white",
+          padding: "8px 12px",
+          fontSize: 12,
+          color: "#111827",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+        }}
+      >
+        MAINTENANCE • PUBLIC
+      </div>
+
       <div
         style={{
           maxWidth: 560,
@@ -86,7 +119,7 @@ export default function Maintenance() {
             <h1 style={{ fontSize: 22, margin: 0, color: "#111827" }}>
               🚧 Wartung aktiv
             </h1>
-            <p style={{ opacity: 0.8, marginTop: 10, color: "#4b5563" }}>
+            <p style={{ opacity: 0.85, marginTop: 10, color: "#4b5563" }}>
               Die App ist gerade nicht öffentlich erreichbar. Bitte später
               erneut versuchen.
             </p>
@@ -104,7 +137,7 @@ export default function Maintenance() {
               background: bypassSeen ? "#ecfdf5" : "#fffbeb",
               color: bypassSeen ? "#047857" : "#92400e",
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 700,
               whiteSpace: "nowrap",
             }}
           >
@@ -139,7 +172,7 @@ export default function Maintenance() {
               border: "1px solid #111827",
               background: "#111827",
               color: "white",
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -147,14 +180,14 @@ export default function Maintenance() {
           </button>
 
           <a
-            href="/"
+            href={goStudioUrl}
             style={{
               borderRadius: 12,
               padding: "10px 14px",
               border: "1px solid #e4e4e7",
               background: "white",
               color: "#111827",
-              fontWeight: 600,
+              fontWeight: 700,
               textDecoration: "none",
             }}
           >
@@ -170,31 +203,16 @@ export default function Maintenance() {
               border: "1px solid #e4e4e7",
               background: "white",
               color: "#111827",
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
             Bypass löschen
           </button>
-
-          <button
-            onClick={() => setAdminOpen((v) => !v)}
-            style={{
-              marginLeft: "auto",
-              borderRadius: 12,
-              padding: "10px 14px",
-              border: "1px solid #e4e4e7",
-              background: "#f4f4f5",
-              color: "#111827",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {adminOpen ? "Admin schließen" : "Admin-Zugang"}
-          </button>
         </div>
 
-        {adminOpen ? (
+        {/* ✅ Admin Panel: NUR sichtbar bei /maintenance#admin */}
+        {adminUIEnabled ? (
           <div
             style={{
               marginTop: 16,
@@ -204,7 +222,7 @@ export default function Maintenance() {
               background: "white",
             }}
           >
-            <div style={{ fontWeight: 700, color: "#111827" }}>
+            <div style={{ fontWeight: 800, color: "#111827" }}>
               Admin Bypass
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: "#4b5563" }}>
@@ -239,7 +257,7 @@ export default function Maintenance() {
                   border: "1px solid #111827",
                   background: "#111827",
                   color: "white",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   cursor: "pointer",
                 }}
               >
@@ -248,7 +266,7 @@ export default function Maintenance() {
             </div>
 
             <div style={{ marginTop: 10, fontSize: 12, color: "#6b7280" }}>
-              Hinweis: Token nie öffentlich teilen.
+              Bookmark für dich: <b>/maintenance#admin</b>
             </div>
           </div>
         ) : null}
@@ -262,7 +280,7 @@ export default function Maintenance() {
           }}
         >
           Support:{" "}
-          <span style={{ color: "#374151", fontWeight: 600 }}>
+          <span style={{ color: "#374151", fontWeight: 700 }}>
             support@getlaunchedge.com
           </span>
         </div>
