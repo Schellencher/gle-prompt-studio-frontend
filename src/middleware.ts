@@ -1,40 +1,19 @@
 // src/middleware.ts
-import { NextResponse, type NextRequest } from "next/server";
-
-const BYPASS_COOKIE = "gle_bypass"; // httpOnly: echter Zugriff (Middleware)
-const BYPASS_UI_COOKIE = "gle_bypass_ui"; // client-lesbar: nur UI/Debug
-const BYPASS_PARAM = "bypass";
-const RESET_PARAM = "resetBypass";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 export function middleware(req: NextRequest) {
   const mode = (process.env.MAINTENANCE_MODE || "").trim();
-  const BYPASS = (process.env.MAINTENANCE_BYPASS_TOKEN || "").trim();
 
-  // Wartung aus -> durchlassen
+  // Wartung aus -> alles normal
   if (mode !== "1") return NextResponse.next();
 
   const p = req.nextUrl.pathname;
 
-  // ✅ RESET BYPASS (muss VOR der Allowlist stehen!)
-  const reset =
-    req.nextUrl.searchParams.get(BYPASS_PARAM) === "0" ||
-    req.nextUrl.searchParams.get(RESET_PARAM) === "1";
-
-  if (reset) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/maintenance";
-    url.search = "";
-
-    const res = NextResponse.redirect(url);
-    res.cookies.set(BYPASS_COOKIE, "", { path: "/", maxAge: 0 });
-    res.cookies.set(BYPASS_UI_COOKIE, "", { path: "/", maxAge: 0 });
-    return res;
-  }
-
-  // Allowlist: Wartungsseite + Next assets + Basics
+  // Immer erlaubt: Next Assets + Basics + (optional) /api
   if (
-    p === "/maintenance" ||
-    p.startsWith("/_next") ||
+    p.startsWith("/_next/") ||
+    p.startsWith("/api/") ||
     p === "/favicon.ico" ||
     p === "/manifest.json" ||
     p.startsWith("/icons") ||
@@ -44,54 +23,47 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Optional: /api nicht blocken (falls du später Next API Routes nutzt)
-  if (p.startsWith("/api")) return NextResponse.next();
-
-  // ✅ Wartungs-Bypass
-  if (BYPASS) {
-    const q = (req.nextUrl.searchParams.get(BYPASS_PARAM) || "").trim();
-    const c = (req.cookies.get(BYPASS_COOKIE)?.value || "").trim();
-
-    if (q === BYPASS || c === BYPASS) {
-      // Wenn über URL-BYPASS reingekommen: Cookies setzen + URL bereinigen
-      if (q === BYPASS && c !== BYPASS) {
-        const clean = req.nextUrl.clone();
-        clean.searchParams.delete(BYPASS_PARAM);
-
-        const res = NextResponse.redirect(clean);
-        const secure = process.env.NODE_ENV === "production";
-
-        // httpOnly Cookie für Middleware
-        res.cookies.set(BYPASS_COOKIE, BYPASS, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure,
-          path: "/",
-          maxAge: 60 * 60 * 24 * 7, // 7 Tage
-        });
-
-        // UI Cookie (damit Client erkennt: bypass aktiv)
-        res.cookies.set(BYPASS_UI_COOKIE, "1", {
-          httpOnly: false,
-          sameSite: "lax",
-          secure,
-          path: "/",
-          maxAge: 60 * 60 * 24 * 7, // 7 Tage
-        });
-
-        return res;
-      }
-
-      // Cookie war schon da -> einfach durchlassen
-      return NextResponse.next();
+  // Wartungs-HTML direkt zurückgeben (keine /maintenance Route nötig)
+  const html = `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GLE Prompt Studio – Wartung</title>
+  <style>
+    :root{color-scheme:dark}
+    body{
+      margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:#050608;color:#e9f6ff;
     }
-  }
+    .box{
+      max-width:520px;padding:28px;border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;background:rgba(18,18,24,.65);backdrop-filter: blur(14px);
+      text-align:center;box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1{margin:0 0 10px;font-size:22px;color:#00e676}
+    p{margin:0;opacity:.85;line-height:1.6}
+    .small{margin-top:10px;font-size:12px;opacity:.6}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🛠️ Update läuft</h1>
+    <p>GLE Prompt Studio wird gerade aktualisiert.</p>
+    <p>Bitte später erneut versuchen.</p>
+    <div class="small">Status: 503 (Maintenance)</div>
+  </div>
+</body>
+</html>`;
 
-  // Default: auf Wartung
-  const url = req.nextUrl.clone();
-  url.pathname = "/maintenance";
-  url.search = "";
-  return NextResponse.redirect(url);
+  return new Response(html, {
+    status: 503,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 }
 
 export const config = {

@@ -1,14 +1,11 @@
 /* src/app/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* =========================
    GLE Prompt Studio — globals.css
    Premium dark + glass cards + PRO badge shimmer
 ========================= */
 
-/* Base */
 :root {
   color-scheme: dark;
 
@@ -68,6 +65,16 @@ body {
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.18);
+}
+
+::selection {
+  background: rgba(0, 230, 118, 0.2);
 }
 
 /* Focus ring (consistent) */
@@ -76,22 +83,33 @@ a {
   outline-offset: 2px;
 }
 
-/* Scrollbar (nice but subtle) */
+/* Inputs baseline (so they match dark theme nicely) */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+/* Scrollbar (subtle) */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(0, 0, 0, 0);
   background-clip: padding-box;
   border-radius: 999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.16);
   border: 2px solid rgba(0, 0, 0, 0);
   background-clip: padding-box;
 }
+
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.18);
 }
@@ -100,7 +118,7 @@ a {
    Utility classes (optional)
 ========================= */
 
-/* Glass surface you can use anywhere: class="glass" */
+/* Glass surfaces */
 .glass {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -108,7 +126,6 @@ a {
   -webkit-backdrop-filter: blur(14px);
 }
 
-/* Slightly stronger glass */
 .glass-strong {
   background: var(--panel2);
   border: 1px solid var(--border2);
@@ -122,7 +139,7 @@ a {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Toast style (if you want) */
+/* Toast style (optional) */
 .toast {
   background: rgba(10, 10, 14, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -130,19 +147,18 @@ a {
   -webkit-backdrop-filter: blur(14px);
 }
 
-/* Warning panel */
+/* Warn & danger panels */
 .warn {
   background: var(--warn);
   border: 1px solid var(--warnBorder);
 }
 
-/* Danger panel */
 .danger {
   background: var(--danger);
   border: 1px solid var(--dangerBorder);
 }
 
-/* PRO badge shimmer */
+/* PRO badge shimmer (optional) */
 .pro-badge {
   position: relative;
   overflow: hidden;
