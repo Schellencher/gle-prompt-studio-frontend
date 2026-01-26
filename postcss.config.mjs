@@ -1,4 +1,7 @@
-// Einfacher PostCSS-Config ohne Tailwind
+// frontend/postcss.config.mjs
 export default {
-  plugins: {},
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
 };
