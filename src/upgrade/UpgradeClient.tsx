@@ -289,7 +289,7 @@ export default function HomePage() {
   // Usage
   const [usageUsed, setUsageUsed] = useState(0);
   const [usageRenewDate, setUsageRenewDate] = useState<Date>(
-    getNextMonthFirstDay()
+    getNextMonthFirstDay(),
   );
 
   // API key (BYOK)
@@ -335,7 +335,7 @@ export default function HomePage() {
 
   const limit = useMemo(
     () => (plan === "PRO" ? PRO_LIMIT_DEFAULT : FREE_LIMIT_DEFAULT),
-    [plan]
+    [plan],
   );
   const quotaReached = usageUsed >= limit;
 
@@ -582,7 +582,7 @@ export default function HomePage() {
       const msg =
         plan === "PRO"
           ? `Limit erreicht (${limit}/${limit}). Reset am ${formatGermanDate(
-              usageRenewDate
+              usageRenewDate,
             )}.`
           : `Free-Limit erreicht (${limit}/${limit}). Upgrade für mehr.`;
       setError(msg);
@@ -634,7 +634,7 @@ export default function HomePage() {
         0;
 
       const m: Meta = {
-        model: data?.meta?.model || data?.model || undefined,
+        model: data?.model || data?.meta?.model || undefined,
         tokens: tokens || undefined,
         boost,
       };
@@ -717,16 +717,16 @@ export default function HomePage() {
                     backendStatus === "ok"
                       ? "ok"
                       : backendStatus === "down"
-                      ? "down"
-                      : ""
+                        ? "down"
+                        : ""
                   }`}
                 >
                   Backend:{" "}
                   {backendStatus === "ok"
                     ? "verbunden ✅"
                     : backendStatus === "down"
-                    ? "nicht erreichbar"
-                    : "prüfe..."}
+                      ? "nicht erreichbar"
+                      : "prüfe..."}
                 </div>
 
                 {mounted && backendStatus === "ok" && (
@@ -971,12 +971,12 @@ export default function HomePage() {
                 {quotaReached
                   ? `Limit erreicht (${limit}/${limit})`
                   : byokOnly && !apiKey.trim()
-                  ? "API Key erforderlich"
-                  : isLoading
-                  ? "Prompt wird generiert..."
-                  : boost
-                  ? "Prompt generieren (BOOST)"
-                  : "Prompt generieren (mit KI)"}
+                    ? "API Key erforderlich"
+                    : isLoading
+                      ? "Prompt wird generiert..."
+                      : boost
+                        ? "Prompt generieren (BOOST)"
+                        : "Prompt generieren (mit KI)"}
               </button>
 
               {error && <div className="gleError">Fehler: {error}</div>}
@@ -1062,7 +1062,7 @@ export default function HomePage() {
                               {
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              }
+                              },
                             )
                           : ""}
                       </span>
