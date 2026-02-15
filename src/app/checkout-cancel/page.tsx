@@ -3,9 +3,9 @@
 import React from "react";
 
 export default function CheckoutCancelPage() {
-  function goBack() {
+  const goBack = () => {
     window.location.href = "/";
-  }
+  };
 
   return (
     <div
@@ -17,23 +17,24 @@ export default function CheckoutCancelPage() {
         >
           Checkout abgebrochen
         </h1>
+
         <p style={{ opacity: 0.85, marginTop: 12 }}>
           Kein Problem — du kannst jederzeit wieder upgraden.
         </p>
 
         <button
+          type="button"
           onClick={goBack}
           style={{
             width: "100%",
             marginTop: 18,
             padding: "14px 16px",
             borderRadius: 14,
-            border: "none",
+            border: "1px solid #333647",
             fontWeight: 900,
             cursor: "pointer",
             background: "#121218",
             color: "#f5f5f7",
-            borderColor: "#333647",
           }}
         >
           Zur App
