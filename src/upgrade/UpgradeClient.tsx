@@ -1020,7 +1020,7 @@ export default function HomePage() {
           <div className="rightFooter">
             {meta && (meta.model || meta.tokens || meta.boost) && (
               <div className="statsLine">
-                {meta.model ? `Model: ${meta.model}` : ""}
+                {meta.model ? `Engine: ${meta.model}` : ""}
                 {typeof meta.tokens === "number"
                   ? ` · Tokens: ${meta.tokens}`
                   : ""}
