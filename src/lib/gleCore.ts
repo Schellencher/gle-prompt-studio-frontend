@@ -1,5 +1,3 @@
-// src/lib/gleCore.ts
-
 /**
  * 1) TYPES & CONSTANTS
  */
@@ -20,7 +18,12 @@ export const ACCOUNTID_KEY = "gle_account_id";
 export const USERID_KEY = "gle_user_id";
 
 const trimSlash = (s: string) => String(s || "").replace(/\/+$/, "");
-export const API_BASE = trimSlash(process.env.NEXT_PUBLIC_API_BASE || "");
+export const API_BASE = trimSlash(
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_BASE ||
+    "",
+);
 
 /**
  * 2) IDENTITY & HEADERS (SSR-safe)
@@ -52,7 +55,6 @@ export const getAccountId = () => getOrCreateId(ACCOUNTID_KEY, "acc");
 export const getUserId = () => getOrCreateId(USERID_KEY, "u");
 
 export function buildIdentityHeaders(extra: Record<string, string> = {}) {
-  // extra kommt am Ende -> überschreibt falls du IDs manuell setzen willst
   return {
     "x-gle-account-id": getAccountId(),
     "x-gle-user-id": getUserId(),
@@ -153,15 +155,7 @@ export type GenerateBody = {
   boost: boolean;
 };
 
-function normLang(v: any): "DE" | "EN" {
-  const s = String(v || "DE")
-    .trim()
-    .toUpperCase();
-  if (s === "EN" || s === "ENGLISH" || s === "ENG" || s === "E") return "EN";
-  return "DE";
-}
-
-export function mapGenerateBody(ui: any) {
+export function mapGenerateBody(ui: any): GenerateBody {
   const rawTopic = ui?.goal ?? ui?.topic ?? "";
   const rawExtra = ui?.context ?? ui?.extra ?? "";
 
