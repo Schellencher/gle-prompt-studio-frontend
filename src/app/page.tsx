@@ -1,4 +1,3 @@
-// src/app/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -120,6 +119,8 @@ Keine Emojis. Kein Meta-Gerede.`);
     }
   }, [accountId, userId, apiKey]);
 
+  const [engineLabel, setEngineLabel] = useState("");
+
   // Headers (override account/user, weil buildIdentityHeaders standardmäßig localStorage liest)
   const headers = useMemo(() => {
     const extra: Record<string, string> = {};
@@ -133,9 +134,13 @@ Keine Emojis. Kein Meta-Gerede.`);
   }, [apiKey, accountId, userId]);
 
   async function refreshMe() {
-    const res = await apiGet<Me>("/api/me", headers);
-    if (res.ok) setMe(res);
-    else setMe(null);
+    try {
+      const res = await apiGet<Me>("/api/me", headers);
+      if (res.ok) setMe(res);
+      else setMe(null);
+    } catch {
+      setMe(null);
+    }
   }
 
   useEffect(() => {
@@ -145,6 +150,8 @@ Keine Emojis. Kein Meta-Gerede.`);
   }, [headers]);
 
   async function onGenerate() {
+    const startedAt = Date.now();
+
     setBusy(true);
     setErr(null);
     setOutput("");
@@ -163,6 +170,7 @@ Keine Emojis. Kein Meta-Gerede.`);
 
       if (res.ok) {
         setOutput(res.output || "");
+        setEngineLabel(String(res.model || "").trim());
         await refreshMe();
       } else {
         setErr(res as AnyErr);
@@ -174,6 +182,15 @@ Keine Emojis. Kein Meta-Gerede.`);
         message: e?.message || String(e),
       });
     } finally {
+      const elapsed = Date.now() - startedAt;
+      const minVisibleMs = 1200;
+
+      if (elapsed < minVisibleMs) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, minVisibleMs - elapsed),
+        );
+      }
+
       setBusy(false);
     }
   }
@@ -227,6 +244,17 @@ Keine Emojis. Kein Meta-Gerede.`);
     const newUser = `u_${safeUUID()}`;
     setAccountId(newAcc);
     setUserId(newUser);
+    setMe(null);
+    setErr(null);
+    setOutput("");
+  }
+
+  async function copyOutput() {
+    try {
+      await navigator.clipboard.writeText(output);
+    } catch {
+      // ignore
+    }
   }
 
   const limit =
@@ -263,10 +291,14 @@ Keine Emojis. Kein Meta-Gerede.`);
         <label>
           <div style={labelSmall}>OpenAI API Key (BYOK optional)</div>
           <input
+            type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             style={inputStyle}
             placeholder="sk-..."
+            autoComplete="off"
+            spellCheck={false}
+            autoCapitalize="none"
           />
         </label>
       </div>
@@ -277,6 +309,7 @@ Keine Emojis. Kein Meta-Gerede.`);
           gap: 10,
           alignItems: "center",
           marginBottom: 12,
+          flexWrap: "wrap",
         }}
       >
         <div style={pill}>
@@ -332,7 +365,7 @@ Keine Emojis. Kein Meta-Gerede.`);
           <div style={labelSmall}>Sprache</div>
           <select
             value={language}
-            onChange={(e) => setLanguage(e.target.value as any)}
+            onChange={(e) => setLanguage(e.target.value as "de" | "en")}
             style={inputStyle}
           >
             <option value="de">DE</option>
@@ -377,14 +410,52 @@ Keine Emojis. Kein Meta-Gerede.`);
           {busy ? "..." : "Generate"}
         </button>
 
-        <button
-          onClick={() => navigator.clipboard.writeText(output)}
-          disabled={!output}
-          style={btnSecondary}
-        >
+        <button onClick={copyOutput} disabled={!output} style={btnSecondary}>
           Copy Output
         </button>
       </div>
+
+      {busy && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            border: "1px solid rgba(255,255,255,0.10)",
+            borderRadius: 14,
+            background: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 8,
+              fontSize: 13,
+              color: "#cfd2dc",
+              fontWeight: 700,
+            }}
+          >
+            Analyse · Struktur · Optimierung · Finalisierung
+          </div>
+
+          <div
+            style={{
+              height: 8,
+              width: "100%",
+              overflow: "hidden",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.10)",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: "70%",
+                borderRadius: 999,
+                background: "linear-gradient(90deg, #00e676, #57c7e8, #ff7043)",
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {err && (
         <div style={panelStyle}>
@@ -392,7 +463,6 @@ Keine Emojis. Kein Meta-Gerede.`);
             Error
           </div>
 
-          {/* kleine Kurzinfo, damit man sofort sieht, warum */}
           <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>
             {err.error ? (
               <>
