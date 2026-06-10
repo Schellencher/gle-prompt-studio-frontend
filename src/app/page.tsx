@@ -99,6 +99,7 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [output, setOutput] = useState("");
   const [err, setErr] = useState<AnyErr | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   // Init: IDs + apiKey aus localStorage
   useEffect(() => {
@@ -118,6 +119,19 @@ Keine Emojis. Kein Meta-Gerede.`);
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    if (!busy) {
+      setLoadingStep(0);
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setLoadingStep((prev) => (prev + 1) % 4);
+    }, 300);
+
+    return () => window.clearInterval(timer);
+  }, [busy]);
 
   // Spiegeln: UI → localStorage (damit Backend/Headers konstant bleiben)
   useEffect(() => {
@@ -443,7 +457,14 @@ Keine Emojis. Kein Meta-Gerede.`);
               fontWeight: 700,
             }}
           >
-            Analyse · Struktur · Optimierung · Finalisierung
+            {
+              [
+                "Analyse läuft",
+                "Struktur wird gebaut",
+                "Optimierung läuft",
+                "Finalisierung",
+              ][loadingStep]
+            }
           </div>
 
           <div
@@ -458,9 +479,11 @@ Keine Emojis. Kein Meta-Gerede.`);
             <div
               style={{
                 height: "100%",
-                width: "70%",
+                width: "34%",
+                marginLeft: `${loadingStep * 22}%`,
                 borderRadius: 999,
                 background: "linear-gradient(90deg, #00e676, #57c7e8, #ff7043)",
+                transition: "margin-left 280ms ease-in-out",
               }}
             />
           </div>
