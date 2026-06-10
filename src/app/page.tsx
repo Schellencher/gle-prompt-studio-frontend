@@ -101,6 +101,98 @@ Keine Emojis. Kein Meta-Gerede.`);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
 
+  const useCaseHelp: Record<string, string> = {
+    "Landingpage / Ad-Copy": `Was du eintragen solltest:
+- Angebot oder Produkt
+- Zielgruppe
+- wichtigster Nutzen
+- Preis oder Early-Access-Hinweis
+- gewünschte CTA
+
+Beispiel:
+GLE Prompt Studio ist ein Tool für Creator und Solopreneure.
+Es erstellt strukturierte Entwürfe für Social Posts, Ads und Landingpages.
+Early Access ist geöffnet, Preis später 19,99€/Monat.
+CTA: Zur Warteliste.`,
+
+    "Social Media Post": `Was du eintragen solltest:
+- Plattform
+- Thema
+- Zielgruppe
+- Kernaussage
+- gewünschte Länge oder Stil
+
+Beispiel:
+Instagram-Post für GLE Prompt Studio.
+Zielgruppe: Creator und Solopreneure.
+Aussage: Weniger Zeitverlust bei der Content-Erstellung.
+Ton: direkt und motivierend.`,
+
+    "LinkedIn Post": `Was du eintragen solltest:
+- Thema
+- Zielgruppe
+- persönliche Perspektive oder Fachmeinung
+- gewünschte Aussage
+- CTA oder Diskussionsfrage
+
+Beispiel:
+LinkedIn-Post über produktiveres Arbeiten mit KI.
+Zielgruppe: Solo-Selbstständige.
+Aussage: Gute Prompts sparen Zeit und bringen Struktur.`,
+
+    Produktbeschreibung: `Was du eintragen solltest:
+- Produktname
+- Zielgruppe
+- wichtigste Vorteile
+- besondere Eigenschaften
+- Preis oder Angebot
+
+Beispiel:
+Produktbeschreibung für GLE Prompt Studio.
+Zielgruppe: Creator und Solopreneure.
+Vorteile: schneller strukturierte Inhalte, klare Formate, weniger Zeitverlust.`,
+
+    "E-Mail": `Was du eintragen solltest:
+- Empfänger/Zielgruppe
+- Ziel der E-Mail
+- Kernaussage
+- gewünschte CTA
+- Ton
+
+Beispiel:
+E-Mail an Interessenten der Warteliste.
+Ziel: Early Access erklären.
+CTA: Zur Warteliste anmelden.`,
+
+    Blogartikel: `Was du eintragen solltest:
+- Thema
+- Zielgruppe
+- gewünschte Struktur
+- Hauptpunkte
+- SEO-Keyword falls vorhanden
+
+Beispiel:
+Blogartikel über Content-Erstellung mit KI.
+Zielgruppe: Solo-Selbstständige.
+Hauptpunkte: Zeit sparen, bessere Struktur, wiederholbare Prozesse.`,
+
+    "Kurzvideo-Skript": `Was du eintragen solltest:
+- Plattform
+- Thema
+- Zielgruppe
+- Hook-Idee
+- gewünschte Länge
+
+Beispiel:
+TikTok/Reel über GLE Prompt Studio.
+Hook: Du verlierst zu viel Zeit beim Content-Erstellen?
+Zielgruppe: Creator und Solopreneure.`,
+  };
+
+  const activeUseCaseHelp =
+    useCaseHelp[useCase] ||
+    "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.";
+
   // Init: IDs + apiKey aus localStorage
   useEffect(() => {
     try {
@@ -128,7 +220,7 @@ Keine Emojis. Kein Meta-Gerede.`);
 
     const timer = window.setInterval(() => {
       setLoadingStep((prev) => (prev + 1) % 4);
-    }, 300);
+    }, 650);
 
     return () => window.clearInterval(timer);
   }, [busy]);
@@ -368,20 +460,35 @@ Keine Emojis. Kein Meta-Gerede.`);
       <div style={gridConfig}>
         <label>
           <div style={labelSmall}>Use-Case</div>
-          <input
+          <select
             value={useCase}
             onChange={(e) => setUseCase(e.target.value)}
             style={inputStyle}
-          />
+          >
+            <option value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
+            <option value="Social Media Post">Social Media Post</option>
+            <option value="LinkedIn Post">LinkedIn Post</option>
+            <option value="Produktbeschreibung">Produktbeschreibung</option>
+            <option value="E-Mail">E-Mail</option>
+            <option value="Blogartikel">Blogartikel</option>
+            <option value="Kurzvideo-Skript">Kurzvideo-Skript</option>
+          </select>
         </label>
 
         <label>
           <div style={labelSmall}>Ton</div>
-          <input
+          <select
             value={tone}
             onChange={(e) => setTone(e.target.value)}
             style={inputStyle}
-          />
+          >
+            <option value="Professionell">Professionell</option>
+            <option value="Direkt">Direkt</option>
+            <option value="Locker">Locker</option>
+            <option value="Verkaufstark">Verkaufstark</option>
+            <option value="Motivierend">Motivierend</option>
+            <option value="Neutral">Neutral</option>
+          </select>
         </label>
 
         <label>
@@ -427,6 +534,22 @@ Keine Emojis. Kein Meta-Gerede.`);
           style={textareaStyle}
         />
       </label>
+
+      <div
+        style={{
+          marginTop: 10,
+          padding: 12,
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.10)",
+          background: "rgba(255,255,255,0.04)",
+          color: "#cfd2dc",
+          fontSize: 12,
+          lineHeight: 1.55,
+          whiteSpace: "pre-line",
+        }}
+      >
+        {activeUseCaseHelp}
+      </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
@@ -483,7 +606,7 @@ Keine Emojis. Kein Meta-Gerede.`);
                 marginLeft: `${loadingStep * 22}%`,
                 borderRadius: 999,
                 background: "linear-gradient(90deg, #00e676, #57c7e8, #ff7043)",
-                transition: "margin-left 280ms ease-in-out",
+                transition: "margin-left 620ms ease-in-out",
               }}
             />
           </div>
