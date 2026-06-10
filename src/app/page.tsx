@@ -208,7 +208,7 @@ Keine Emojis. Kein Meta-Gerede.`);
       });
     } finally {
       const elapsed = Date.now() - startedAt;
-      const minVisibleMs = 1200;
+      const minVisibleMs = 2500;
 
       if (elapsed < minVisibleMs) {
         await new Promise((resolve) =>
