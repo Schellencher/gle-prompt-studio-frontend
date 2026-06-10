@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   apiGet,
   apiPost,
@@ -48,6 +48,16 @@ const LS_ACCOUNT = "gle_account_id";
 const LS_USER = "gle_user_id";
 const LS_APIKEY = "gle_api_key_v1";
 
+function safeUUID() {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    }
+  } catch {}
+
+  return Math.random().toString(16).slice(2, 18);
+}
+
 /**
  * COMPONENT
  */
@@ -88,6 +98,7 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
   const [err, setErr] = useState<AnyErr | null>(null);
+  const loadingRef = useRef<HTMLDivElement | null>(null);
 
   // Init: IDs + apiKey aus localStorage
   useEffect(() => {
@@ -194,7 +205,6 @@ Keine Emojis. Kein Meta-Gerede.`);
       setBusy(false);
     }
   }
-
   async function onUpgrade() {
     setBusy(true);
     setErr(null);
@@ -245,7 +255,6 @@ Keine Emojis. Kein Meta-Gerede.`);
     setAccountId(newAcc);
     setUserId(newUser);
     setMe(null);
-    setErr(null);
     setOutput("");
   }
 
@@ -417,6 +426,7 @@ Keine Emojis. Kein Meta-Gerede.`);
 
       {busy && (
         <div
+          ref={loadingRef}
           style={{
             marginTop: 14,
             padding: 12,
@@ -509,19 +519,6 @@ Keine Emojis. Kein Meta-Gerede.`);
       )}
     </main>
   );
-}
-
-/**
- * HELPERS
- */
-function safeUUID() {
-  try {
-    return crypto?.randomUUID
-      ? crypto.randomUUID()
-      : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  } catch {
-    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  }
 }
 
 /**
