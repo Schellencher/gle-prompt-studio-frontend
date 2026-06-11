@@ -102,6 +102,50 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [loadingStep, setLoadingStep] = useState(0);
   const showDevActions = false;
 
+  const languagePresets: Record<
+    "de" | "en",
+    { goal: string; context: string }
+  > = {
+    de: {
+      goal: "GLE Prompt Studio – KI-Tool für Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
+      context: `Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
+Format exakt so:
+
+1) Headline (max. 9 Wörter)
+2) Subheadline (1 Satz)
+3) 5 Bulletpoints (kurz, knackig)
+4) CTA-Zeile (1 Satz)
+5) Mini-FAQ: 3 Fragen + Antworten (je 1 Satz)
+
+Infos, die rein müssen:
+- Early Access / Warteliste offen
+- Preis später 19,99€/Monat
+- Zielgruppe: Creator & Solopreneure
+- weniger Zeitverlust, schneller Content, konsistente Qualität
+
+Keine Emojis. Kein Meta-Gerede.`,
+    },
+    en: {
+      goal: "GLE Prompt Studio – AI tool for creators and solopreneurs: social posts, ads and landing pages in seconds (Early Access)",
+      context: `Write a typical SaaS hero section + bullet points.
+Use exactly this format:
+
+1) Headline (max. 9 words)
+2) Subheadline (1 sentence)
+3) 5 bullet points (short and clear)
+4) CTA line (1 sentence)
+5) Mini FAQ: 3 questions + answers (1 sentence each)
+
+Information that must be included:
+- Early Access / waitlist is open
+- Future price: 19.99€/month
+- Target audience: creators and solopreneurs
+- less time wasted, faster content, consistent quality
+
+No emojis. No meta talk.`,
+    },
+  };
+
   const useCaseHelp: Record<string, string> = {
     "Landingpage / Ad-Copy": `Was du eintragen solltest:
 - Angebot oder Produkt
@@ -193,6 +237,11 @@ Zielgruppe: Creator und Solopreneure.`,
   const activeUseCaseHelp =
     useCaseHelp[useCase] ||
     "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.";
+
+  useEffect(() => {
+    setGoal(languagePresets[language].goal);
+    setContext(languagePresets[language].context);
+  }, [language]);
 
   // Init: IDs + apiKey aus localStorage
   useEffect(() => {
@@ -440,7 +489,7 @@ Zielgruppe: Creator und Solopreneure.`,
           ) : null}
         </div>
 
-                        <button onClick={refreshMe} disabled={busy} style={btnSecondary}>
+        <button onClick={refreshMe} disabled={busy} style={btnSecondary}>
           Aktualisieren
         </button>
 
@@ -454,7 +503,11 @@ Zielgruppe: Creator und Solopreneure.`,
               Upgrade PRO
             </button>
 
-            <button onClick={onBillingPortal} disabled={busy} style={btnSecondary}>
+            <button
+              onClick={onBillingPortal}
+              disabled={busy}
+              style={btnSecondary}
+            >
               Billing Portal
             </button>
           </>
@@ -500,7 +553,12 @@ Zielgruppe: Creator und Solopreneure.`,
           <div style={labelSmall}>Sprache</div>
           <select
             value={language}
-            onChange={(e) => setLanguage(e.target.value as "de" | "en")}
+            onChange={(e) => {
+              const nextLanguage = e.target.value as "de" | "en";
+              setLanguage(nextLanguage);
+              setGoal(languagePresets[nextLanguage].goal);
+              setContext(languagePresets[nextLanguage].context);
+            }}
             style={inputStyle}
           >
             <option value="de">DE</option>
