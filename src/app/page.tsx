@@ -146,6 +146,137 @@ No emojis. No meta talk.`,
     },
   };
 
+  function getPresetFor(nextUseCase: string, nextLanguage: "de" | "en") {
+    if (nextUseCase === "Social Media Post") {
+      return nextLanguage === "en"
+        ? {
+            goal:
+              "GLE Prompt Studio – AI tool for creators and solopreneurs launching Early Access",
+            context: `Create a social media post for Instagram or LinkedIn.
+Use exactly this format:
+
+1) Hook
+2) Short main text
+3) 4 bullet points
+4) CTA
+
+Information that must be included:
+- Early Access / waitlist is open
+- Future price: 19.99€/month
+- Target audience: creators and solopreneurs
+- less time wasted, faster content, consistent quality
+
+No emojis. No meta talk.`,
+          }
+        : {
+            goal:
+              "GLE Prompt Studio – KI-Tool für Creator & Solopreneure im Early Access",
+            context: `Erstelle einen Social-Media-Post für Instagram oder LinkedIn.
+Format exakt so:
+
+1) Hook
+2) kurzer Haupttext
+3) 4 Bulletpoints
+4) CTA
+
+Infos, die rein müssen:
+- Early Access / Warteliste offen
+- Preis später 19,99€/Monat
+- Zielgruppe: Creator & Solopreneure
+- weniger Zeitverlust, schneller Content, konsistente Qualität
+
+Keine Emojis. Kein Meta-Gerede.`,
+          };
+    }
+
+    if (nextUseCase === "LinkedIn Post") {
+      return nextLanguage === "en"
+        ? {
+            goal:
+              "GLE Prompt Studio – AI tool for creators and solopreneurs in Early Access",
+            context: `Create a LinkedIn post.
+Use exactly this format:
+
+1) Strong opening sentence
+2) Short main text
+3) 3 clear bullet points
+4) Closing thought
+5) CTA
+
+Information that must be included:
+- GLE Prompt Studio helps creators and solopreneurs prepare content faster
+- It supports social posts, ads and landing pages
+- Early Access / waitlist is open
+- Future price: 19.99€/month
+
+No emojis. No hashtags. No meta talk.`,
+          }
+        : {
+            goal:
+              "GLE Prompt Studio – KI-Tool für Creator & Solopreneure im Early Access",
+            context: `Erstelle einen LinkedIn-Post.
+Format exakt so:
+
+1) Starker Einstiegssatz
+2) kurzer Haupttext
+3) 3 klare Bulletpoints
+4) abschließender Gedanke
+5) CTA
+
+Infos, die rein müssen:
+- GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
+- Es unterstützt Social Posts, Ads und Landingpages
+- Early Access / Warteliste offen
+- Preis später 19,99€/Monat
+
+Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
+          };
+    }
+    if (nextUseCase === "Produktbeschreibung") {
+      return nextLanguage === "en"
+        ? {
+            goal:
+              "GLE Prompt Studio – product description for creators and solopreneurs",
+            context: `Create a product description.
+Use exactly this format:
+
+1) Product name
+2) Short description
+3) 5 benefits
+4) Best suited for
+5) CTA
+
+Information that must be included:
+- GLE Prompt Studio helps creators and solopreneurs prepare content faster
+- It supports social posts, ads and landing pages
+- Early Access / waitlist is open
+- Future price: 19.99€/month
+
+No emojis. No hashtags. No meta talk.`,
+          }
+        : {
+            goal:
+              "GLE Prompt Studio – Produktbeschreibung für Creator & Solopreneure",
+            context: `Erstelle eine Produktbeschreibung.
+Format exakt so:
+
+1) Produktname
+2) Kurzbeschreibung
+3) 5 Vorteile
+4) Für wen geeignet
+5) CTA
+
+Infos, die rein müssen:
+- GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
+- Es unterstützt Social Posts, Ads und Landingpages
+- Early Access / Warteliste offen
+- Preis später 19,99€/Monat
+
+Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
+          };
+    }
+    return languagePresets[nextLanguage];
+  }
   const useCaseHelp: Record<string, string> = {
     "Landingpage / Ad-Copy": `Was du eintragen solltest:
 - Angebot oder Produkt
@@ -622,7 +753,16 @@ Target audience: creators and solopreneurs.`,
           <div style={labelSmall}>Use-Case</div>
           <select
             value={useCase}
-            onChange={(e) => setUseCase(e.target.value)}
+            onChange={(e) => {
+              const nextUseCase = e.target.value;
+              const preset = getPresetFor(nextUseCase, language);
+
+              setUseCase(nextUseCase);
+              setGoal(preset.goal);
+              setContext(preset.context);
+              setOutput("");
+              setErr(null);
+            }}
             style={inputStyle}
           >
             <option value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
@@ -658,8 +798,9 @@ Target audience: creators and solopreneurs.`,
             onChange={(e) => {
               const nextLanguage = e.target.value as "de" | "en";
               setLanguage(nextLanguage);
-              setGoal(languagePresets[nextLanguage].goal);
-              setContext(languagePresets[nextLanguage].context);
+              const preset = getPresetFor(useCase, nextLanguage);
+              setGoal(preset.goal);
+              setContext(preset.context);
               setOutput("");
               setErr(null);
             }}
