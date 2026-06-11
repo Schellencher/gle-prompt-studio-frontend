@@ -100,6 +100,7 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [err, setErr] = useState<AnyErr | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
+  const showDevActions = false;
 
   const useCaseHelp: Record<string, string> = {
     "Landingpage / Ad-Copy": `Was du eintragen solltest:
@@ -439,21 +440,25 @@ Zielgruppe: Creator und Solopreneure.`,
           ) : null}
         </div>
 
-        <button onClick={refreshMe} disabled={busy} style={btnSecondary}>
-          Refresh
+                        <button onClick={refreshMe} disabled={busy} style={btnSecondary}>
+          Aktualisieren
         </button>
 
-        <button onClick={resetIds} disabled={busy} style={btnSecondary}>
-          Reset IDs
-        </button>
+        {showDevActions && (
+          <>
+            <button onClick={resetIds} disabled={busy} style={btnSecondary}>
+              Reset IDs
+            </button>
 
-        <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
-          Upgrade PRO
-        </button>
+            <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
+              Upgrade PRO
+            </button>
 
-        <button onClick={onBillingPortal} disabled={busy} style={btnSecondary}>
-          Billing Portal
-        </button>
+            <button onClick={onBillingPortal} disabled={busy} style={btnSecondary}>
+              Billing Portal
+            </button>
+          </>
+        )}
       </div>
 
       {/* CONFIG */}
