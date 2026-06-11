@@ -327,6 +327,19 @@ Target audience: creators and solopreneurs.`,
       ? "Briefly describe the topic, target audience, desired result and important details."
       : "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.");
 
+  const uiText =
+    language === "en"
+      ? {
+          generate: "Create prompt",
+          copy: "Copy output",
+          result: "Result",
+        }
+      : {
+          generate: "Prompt erstellen",
+          copy: "Ausgabe kopieren",
+          result: "Ergebnis",
+        };
+
   useEffect(() => {
     setGoal(languagePresets[language].goal);
     setContext(languagePresets[language].context);
@@ -439,7 +452,7 @@ Target audience: creators and solopreneurs.`,
       });
     } finally {
       const elapsed = Date.now() - startedAt;
-      const minVisibleMs = 2500;
+      const minVisibleMs = 700;
 
       if (elapsed < minVisibleMs) {
         await new Promise((resolve) =>
@@ -647,6 +660,8 @@ Target audience: creators and solopreneurs.`,
               setLanguage(nextLanguage);
               setGoal(languagePresets[nextLanguage].goal);
               setContext(languagePresets[nextLanguage].context);
+              setOutput("");
+              setErr(null);
             }}
             style={inputStyle}
           >
@@ -705,11 +720,11 @@ Target audience: creators and solopreneurs.`,
 
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
-          {busy ? "..." : "Prompt erstellen"}
+          {busy ? "..." : uiText.generate}
         </button>
 
         <button onClick={copyOutput} disabled={!output} style={btnSecondary}>
-          Ausgabe kopieren
+          {uiText.copy}
         </button>
       </div>
 
@@ -802,7 +817,9 @@ Target audience: creators and solopreneurs.`,
 
       {output && (
         <div style={panelStyle}>
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>Ergebnis</div>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            {uiText.result}
+          </div>
           <pre
             style={{
               whiteSpace: "pre-wrap",
