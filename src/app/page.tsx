@@ -234,9 +234,98 @@ Hook: Du verlierst zu viel Zeit beim Content-Erstellen?
 Zielgruppe: Creator und Solopreneure.`,
   };
 
+  const useCaseHelpEn: Record<string, string> = {
+    "Landingpage / Ad-Copy": `What you should enter:
+- offer or product
+- target audience
+- main benefit
+- price or Early Access note
+- desired CTA
+
+Example:
+GLE Prompt Studio is a tool for creators and solopreneurs.
+It creates structured drafts for social posts, ads and landing pages.
+Early Access is open, future price 19.99€/month.
+CTA: Join the waitlist.`,
+
+    "Social Media Post": `What you should enter:
+- platform
+- topic
+- target audience
+- core message
+- desired length or style
+
+Example:
+Instagram post for GLE Prompt Studio.
+Target audience: creators and solopreneurs.
+Message: Spend less time creating content.
+Tone: direct and motivating.`,
+
+    "LinkedIn Post": `What you should enter:
+- topic
+- target audience
+- personal perspective or expert opinion
+- main message
+- CTA or discussion question
+
+Example:
+LinkedIn post about working more productively with AI.
+Target audience: solo entrepreneurs.
+Message: Good prompts save time and create structure.`,
+
+    Produktbeschreibung: `What you should enter:
+- product name
+- target audience
+- key benefits
+- special features
+- price or offer
+
+Example:
+Product description for GLE Prompt Studio.
+Target audience: creators and solopreneurs.
+Benefits: faster structured content, clear formats, less wasted time.`,
+
+    "E-Mail": `What you should enter:
+- recipient or target audience
+- goal of the email
+- core message
+- desired CTA
+- tone
+
+Example:
+Email to waitlist subscribers.
+Goal: explain Early Access.
+CTA: Join the waitlist.`,
+
+    Blogartikel: `What you should enter:
+- topic
+- target audience
+- desired structure
+- main points
+- SEO keyword if available
+
+Example:
+Blog article about AI content creation.
+Target audience: solo entrepreneurs.
+Main points: save time, better structure, repeatable processes.`,
+
+    "Kurzvideo-Skript": `What you should enter:
+- platform
+- topic
+- target audience
+- hook idea
+- desired length
+
+Example:
+TikTok/Reel about GLE Prompt Studio.
+Hook: Are you wasting too much time creating content?
+Target audience: creators and solopreneurs.`,
+  };
   const activeUseCaseHelp =
-    useCaseHelp[useCase] ||
-    "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.";
+    (language === "en" ? useCaseHelpEn : useCaseHelp)[useCase] ||
+    (language === "en"
+      ? "Briefly describe the topic, target audience, desired result and important details."
+      : "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.");
 
   useEffect(() => {
     setGoal(languagePresets[language].goal);
