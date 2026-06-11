@@ -519,7 +519,7 @@ Zielgruppe: Creator und Solopreneure.`,
       </div>
 
       <label>
-        <div style={labelSmall}>Goal (UI) → topic (Backend)</div>
+        <div style={labelSmall}>Thema / Angebot</div>
         <textarea
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
@@ -531,7 +531,7 @@ Zielgruppe: Creator und Solopreneure.`,
       <div style={{ height: 10 }} />
 
       <label>
-        <div style={labelSmall}>Context / Format (UI) → extra (Backend)</div>
+        <div style={labelSmall}>Details & gewünschtes Format</div>
         <textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
@@ -558,11 +558,11 @@ Zielgruppe: Creator und Solopreneure.`,
 
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
-          {busy ? "..." : "Generate"}
+          {busy ? "..." : "Prompt erstellen"}
         </button>
 
         <button onClick={copyOutput} disabled={!output} style={btnSecondary}>
-          Copy Output
+          Ausgabe kopieren
         </button>
       </div>
 
@@ -655,7 +655,7 @@ Zielgruppe: Creator und Solopreneure.`,
 
       {output && (
         <div style={panelStyle}>
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>Output</div>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Ergebnis</div>
           <pre
             style={{
               whiteSpace: "pre-wrap",
