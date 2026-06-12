@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -250,6 +250,65 @@ Infos, die rein mÃ¼ssen:
 - Preis spÃ¤ter 19,99â‚¬/Monat
 
 Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
+          };
+    }
+    if (nextUseCase === "E-Mail") {
+      return nextLanguage === "en"
+        ? {
+            goal:
+              "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
+            context: `Create a short marketing email.
+Use exactly this format:
+
+1) Subject line
+2) Opening sentence
+3) Short main text
+4) 3 clear benefits
+5) CTA
+6) Closing sentence
+
+Information that must be included:
+- Early Access / waitlist is open
+- Future price: 19.99€/month
+- Target audience: creators and solopreneurs
+- less time wasted, faster content, consistent quality
+
+Quality rules:
+- This must be an email, not a landing page.
+- Do not write a FAQ.
+- Do not write a headline section.
+- The CTA may only appear in point 5.
+- Write clean, complete sentences.
+
+No emojis. No meta talk.`,
+          }
+        : {
+            goal:
+              "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
+            context: `Erstelle eine kurze Marketing-E-Mail.
+Format exakt so:
+
+1) Betreffzeile
+2) Einstiegssatz
+3) kurzer Haupttext
+4) 3 klare Vorteile
+5) CTA
+6) Abschlusssatz
+
+Infos, die rein müssen:
+- Early Access / Warteliste offen
+- Preis später 19,99€/Monat
+- Zielgruppe: Creator & Solopreneure
+- weniger Zeitverlust, schneller Content, konsistentere Qualität
+
+Qualitätsregeln:
+- Das Ergebnis muss eine E-Mail sein, keine Landingpage.
+- Keine FAQ schreiben.
+- Keine Hero-Sektion schreiben.
+- Die CTA darf nur in Punkt 5 stehen.
+- Schreibe saubere, vollständige Sätze.
+
+Keine Emojis. Kein Meta-Gerede.`,
           };
     }
     if (nextUseCase === "Produktbeschreibung") {
