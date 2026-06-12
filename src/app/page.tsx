@@ -260,12 +260,15 @@ Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
             context: `Create a short marketing email.
 Use exactly this format:
 
-1) Subject line
-2) Opening sentence
-3) Short main text
-4) 3 clear benefits
-5) CTA
-6) Closing sentence
+1) Subject:
+2) Opening sentence:
+3) Short main text:
+4) Benefits:
+- Benefit 1
+- Benefit 2
+- Benefit 3
+5) CTA:
+6) Closing sentence:
 
 Information that must be included:
 - Early Access / waitlist is open
@@ -277,7 +280,10 @@ Quality rules:
 - This must be an email, not a landing page.
 - Do not write a FAQ.
 - Do not write a headline section.
+- Point 4 must only contain three benefit bullet points.
+- Do not use numbered subpoints under point 4.
 - The CTA may only appear in point 5.
+- Do not write "CTA line" in point 4.
 - Write clean, complete sentences.
 
 No emojis. No meta talk.`,
@@ -288,12 +294,15 @@ No emojis. No meta talk.`,
             context: `Erstelle eine kurze Marketing-E-Mail.
 Format exakt so:
 
-1) Betreffzeile
-2) Einstiegssatz
-3) kurzer Haupttext
-4) 3 klare Vorteile
-5) CTA
-6) Abschlusssatz
+1) Betreff:
+2) Einstiegssatz:
+3) Kurzer Haupttext:
+4) Vorteile:
+- Vorteil 1
+- Vorteil 2
+- Vorteil 3
+5) CTA:
+6) Abschlusssatz:
 
 Infos, die rein müssen:
 - Early Access / Warteliste offen
@@ -305,8 +314,12 @@ Qualitätsregeln:
 - Das Ergebnis muss eine E-Mail sein, keine Landingpage.
 - Keine FAQ schreiben.
 - Keine Hero-Sektion schreiben.
+- Punkt 4 darf nur drei Vorteil-Bulletpoints enthalten.
+- Unter Punkt 4 keine nummerierten Unterpunkte verwenden.
 - Die CTA darf nur in Punkt 5 stehen.
+- Schreibe nicht "CTA-Zeile" in Punkt 4.
 - Schreibe saubere, vollständige Sätze.
+- Keine kaputten Satzteile.
 
 Keine Emojis. Kein Meta-Gerede.`,
           };
