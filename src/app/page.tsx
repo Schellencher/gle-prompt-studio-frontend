@@ -109,6 +109,7 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
+  const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<AnyErr | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -641,6 +642,7 @@ Target audience: creators and solopreneurs.`,
     setBusy(true);
     setErr(null);
     setOutput("");
+    setCopied(false);
 
     try {
       const body = mapGenerateBody({
