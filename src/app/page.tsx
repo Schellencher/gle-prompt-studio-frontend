@@ -67,6 +67,7 @@ export default function Home() {
   const [userId, setUserId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showPromptDetails, setShowPromptDetails] = useState(false);
 
   // Formular
   const [useCase, setUseCase] = useState("Landingpage / Ad-Copy");
@@ -942,15 +943,42 @@ Target audience: creators and solopreneurs.`,
 
       <div style={{ height: 10 }} />
 
-      <label>
-        <div style={labelSmall}>Details & gewünschtes Format</div>
-        <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          rows={12}
-          style={textareaStyle}
-        />
-      </label>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 12,
+        }}
+      >
+        <div style={labelSmall}>Feinsteuerung</div>
+        <button
+          type="button"
+          onClick={() => setShowPromptDetails(!showPromptDetails)}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "#6b7280",
+            fontSize: 12,
+            cursor: "pointer",
+            textDecoration: "underline",
+          }}
+        >
+          {showPromptDetails ? "Detail-Regeln ausblenden" : "Detail-Regeln anzeigen"}
+        </button>
+      </div>
+
+      {showPromptDetails && (
+        <label>
+          <div style={labelSmall}>Details & gewünschtes Format</div>
+          <textarea
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            rows={10}
+            style={textareaStyle}
+          />
+        </label>
+      )}
 
       <div
         style={{
@@ -965,7 +993,7 @@ Target audience: creators and solopreneurs.`,
           whiteSpace: "pre-line",
         }}
       >
-        {activeUseCaseHelp}
+        {showPromptDetails ? activeUseCaseHelp : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
