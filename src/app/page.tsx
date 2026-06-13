@@ -724,8 +724,20 @@ Target audience: creators and solopreneurs.`,
         headers,
       );
 
-      if (res.ok) window.location.href = res.url;
-      else setErr(res as AnyErr);
+      if (res.ok) {
+        window.location.href = res.url;
+      } else if ((res as AnyErr).error === "missing_customer_id") {
+        setErr({
+          ok: false,
+          error: "billing_not_available",
+          message:
+            language === "en"
+              ? "The billing portal is not available for this PRO test account yet. It will work after a real Stripe checkout."
+              : "Für diesen PRO-Testaccount ist noch kein Stripe-Kundenkonto verknüpft. Das Abo-Portal funktioniert erst nach einem echten Stripe-Checkout.",
+        });
+      } else {
+        setErr(res as AnyErr);
+      }
     } catch (e: any) {
       setErr({
         ok: false,
