@@ -1142,7 +1142,7 @@ Target audience: creators and solopreneurs.`,
         <div style={outputPanelStyle}>
           <div style={outputHeaderStyle}>
             <span>{uiText.result}</span>
-            <span style={{ fontSize: 11, opacity: 0.65 }}>fertig</span>
+            <span style={{ fontSize: 11, opacity: 0.65 }}>Fertig</span>
           </div>
           <pre style={outputPreStyle}>{output}</pre>
         </div>
