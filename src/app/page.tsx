@@ -704,28 +704,6 @@ Target audience: creators and solopreneurs.`,
     }
   }
 
-  async function onBillingPortal() {
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await apiPost<{ url: string }>(
-        "/api/billing-portal",
-        { accountId, userId },
-        headers,
-      );
-      if (res.ok) window.location.href = res.url;
-      else setErr(res as AnyErr);
-    } catch (e: any) {
-      setErr({
-        ok: false,
-        error: "client_error",
-        message: e?.message || String(e),
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function resetIds() {
     const newAcc = `acc_${safeUUID()}`;
     const newUser = `u_${safeUUID()}`;
@@ -836,24 +814,24 @@ Target audience: creators and solopreneurs.`,
           Aktualisieren
         </button>
 
+        {me?.plan !== "PRO" ? (
+          <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
+            Upgrade PRO
+          </button>
+        ) : (
+          <button
+            onClick={onBillingPortal}
+            disabled={busy}
+            style={btnSecondary}
+          >
+            Abo verwalten
+          </button>
+        )}
+
         {showDevActions && (
-          <>
-            <button onClick={resetIds} disabled={busy} style={btnSecondary}>
-              Reset IDs
-            </button>
-
-            <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
-              Upgrade PRO
-            </button>
-
-            <button
-              onClick={onBillingPortal}
-              disabled={busy}
-              style={btnSecondary}
-            >
-              Billing Portal
-            </button>
-          </>
+          <button onClick={resetIds} disabled={busy} style={btnSecondary}>
+            Reset IDs
+          </button>
         )}
       </div>
 
@@ -1282,4 +1260,3 @@ const outputPreStyle: React.CSSProperties = {
   lineHeight: 1.55,
   color: "#f9fafb",
 };
-
