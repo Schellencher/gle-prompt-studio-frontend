@@ -858,19 +858,21 @@ Target audience: creators and solopreneurs.`,
           {language === "en" ? "Refresh" : "Aktualisieren"}
         </button>
 
-        {me?.plan !== "PRO" ? (
-          <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
-            Upgrade PRO
-          </button>
-        ) : (
-          <button
-            onClick={onBillingPortal}
-            disabled={busy}
-            style={statusRefreshButtonStyle}
-          >
-            {language === "en" ? "Manage subscription" : "Abo verwalten"}
-          </button>
-        )}
+        {me?.plan ? (
+          me.plan !== "PRO" ? (
+            <button onClick={onUpgrade} disabled={busy} style={btnPrimary}>
+              Upgrade PRO
+            </button>
+          ) : (
+            <button
+              onClick={onBillingPortal}
+              disabled={busy}
+              style={statusRefreshButtonStyle}
+            >
+              {language === "en" ? "Manage subscription" : "Abo verwalten"}
+            </button>
+          )
+        ) : null}
 
         {showDevActions && (
           <button onClick={resetIds} disabled={busy} style={btnSecondary}>
