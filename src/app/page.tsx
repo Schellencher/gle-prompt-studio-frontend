@@ -170,7 +170,8 @@ No emojis. No meta talk.`,
     if (nextUseCase === "Social Media Post") {
       return nextLanguage === "en"
         ? {
-            goal: "GLE Prompt Studio â€“ AI tool for creators and solopreneurs launching Early Access",
+            goal:
+              "GLE Prompt Studio â€“ AI tool for creators and solopreneurs launching Early Access",
             context: `Create a social media post for Instagram or LinkedIn.
 Use exactly this format:
 
@@ -188,7 +189,8 @@ Information that must be included:
 No emojis. No meta talk.`,
           }
         : {
-            goal: "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
+            goal:
+              "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
             context: `Erstelle einen Social-Media-Post fÃ¼r Instagram oder LinkedIn.
 Format exakt so:
 
@@ -210,7 +212,8 @@ Keine Emojis. Kein Meta-Gerede.`,
     if (nextUseCase === "LinkedIn Post") {
       return nextLanguage === "en"
         ? {
-            goal: "GLE Prompt Studio â€“ AI tool for creators and solopreneurs in Early Access",
+            goal:
+              "GLE Prompt Studio â€“ AI tool for creators and solopreneurs in Early Access",
             context: `Create a LinkedIn post.
 Use exactly this format:
 
@@ -229,7 +232,8 @@ Information that must be included:
 No emojis. No hashtags. No meta talk.`,
           }
         : {
-            goal: "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
+            goal:
+              "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
             context: `Erstelle einen LinkedIn-Post.
 Format exakt so:
 
@@ -251,7 +255,8 @@ Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
     if (nextUseCase === "E-Mail") {
       return nextLanguage === "en"
         ? {
-            goal: "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
+            goal:
+              "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
             context: `Create a short marketing email.
 Use exactly this format:
 
@@ -284,7 +289,8 @@ Quality rules:
 No emojis. No meta talk.`,
           }
         : {
-            goal: "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
+            goal:
+              "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
             context: `Erstelle eine kurze Marketing-E-Mail.
 Format exakt so:
 
@@ -321,7 +327,8 @@ Keine Emojis. Kein Meta-Gerede.`,
     if (nextUseCase === "Produktbeschreibung") {
       return nextLanguage === "en"
         ? {
-            goal: "GLE Prompt Studio â€“ product description for creators and solopreneurs",
+            goal:
+              "GLE Prompt Studio â€“ product description for creators and solopreneurs",
             context: `Create a product description.
 Use exactly this format:
 
@@ -340,7 +347,8 @@ Information that must be included:
 No emojis. No hashtags. No meta talk.`,
           }
         : {
-            goal: "GLE Prompt Studio â€“ Produktbeschreibung fÃ¼r Creator & Solopreneure",
+            goal:
+              "GLE Prompt Studio â€“ Produktbeschreibung fÃ¼r Creator & Solopreneure",
             context: `Erstelle eine Produktbeschreibung.
 Format exakt so:
 
@@ -795,8 +803,8 @@ Target audience: creators and solopreneurs.`,
         }}
       >
         <div style={pill}>
-          Plan: <b>{me?.plan ?? "â€”"}</b> Â· Used:{" "}
-          <b>{me?.usage?.used ?? "â€”"}</b> / <b>{limit ?? "â€”"}</b>
+          Plan: <b>{me?.plan ?? "â€”"}</b> Â· Used: <b>{me?.usage?.used ?? "â€”"}</b>{" "}
+          / <b>{limit ?? "â€”"}</b>
           {me?.plan === "PRO" ? (
             <>
               {" "}
@@ -849,9 +857,7 @@ Target audience: creators and solopreneurs.`,
             }}
             style={inputStyle}
           >
-            <option style={optionStyle} value="Landingpage / Ad-Copy">
-              Landingpage / Ad-Copy
-            </option>
+            <option value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
             <option value="Social Media Post">Social Media Post</option>
             <option value="LinkedIn Post">LinkedIn Post</option>
             <option value="Produktbeschreibung">Produktbeschreibung</option>
@@ -1095,12 +1101,6 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   border: "1px solid #ddd",
   outline: "none",
-};
-
-const optionStyle: React.CSSProperties = {
-  color: "#000000",
-  backgroundColor: "#ffffff",
-  fontWeight: 700,
 };
 
 const textareaStyle: React.CSSProperties = {
