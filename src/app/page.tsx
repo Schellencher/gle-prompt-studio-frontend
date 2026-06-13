@@ -1129,20 +1129,12 @@ Target audience: creators and solopreneurs.`,
       )}
 
       {output && (
-        <div style={panelStyle}>
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            {uiText.result}
+        <div style={outputPanelStyle}>
+          <div style={outputHeaderStyle}>
+            <span>{uiText.result}</span>
+            <span style={{ fontSize: 11, opacity: 0.65 }}>fertig</span>
           </div>
-          <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              margin: 0,
-              fontSize: 14,
-              lineHeight: 1.45,
-            }}
-          >
-            {output}
-          </pre>
+          <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
     </main>
@@ -1257,3 +1249,27 @@ const statusRefreshButtonStyle: React.CSSProperties = {
   fontSize: 12,
   borderRadius: 10,
 };
+
+const outputPanelStyle: React.CSSProperties = {
+  ...panelStyle,
+  border: "1px solid rgba(0, 230, 118, 0.22)",
+  background: "linear-gradient(180deg, #12131a 0%, #0f1117 100%)",
+  boxShadow: "0 18px 35px rgba(0, 0, 0, 0.28)",
+};
+
+const outputHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  fontWeight: 800,
+  marginBottom: 10,
+};
+
+const outputPreStyle: React.CSSProperties = {
+  whiteSpace: "pre-wrap",
+  margin: 0,
+  fontSize: 14,
+  lineHeight: 1.55,
+  color: "#f9fafb",
+};
+
