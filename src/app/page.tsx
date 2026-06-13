@@ -691,8 +691,18 @@ Target audience: creators and solopreneurs.`,
         { accountId, userId },
         headers,
       );
-      if (res.ok) window.location.href = res.url;
-      else setErr(res as AnyErr);
+      if (res.ok) {
+        window.location.href = res.url;
+      } else if ((res as AnyErr).error === "missing_customer_id") {
+        setErr({
+          ok: false,
+          error: "billing_not_available",
+          message:
+            "Für diesen PRO-Testaccount ist noch kein Stripe-Kundenkonto verknüpft. Das Abo-Portal funktioniert erst nach einem echten Stripe-Checkout.",
+        });
+      } else {
+        setErr(res as AnyErr);
+      }
     } catch (e: any) {
       setErr({
         ok: false,
@@ -828,13 +838,12 @@ Target audience: creators and solopreneurs.`,
             </>
           ) : null}
         </div>
-
         <button
           onClick={refreshMe}
           disabled={busy}
           style={statusRefreshButtonStyle}
         >
-          Aktualisieren
+          {language === "en" ? "Refresh" : "Aktualisieren"}
         </button>
 
         {me?.plan !== "PRO" ? (
@@ -845,9 +854,9 @@ Target audience: creators and solopreneurs.`,
           <button
             onClick={onBillingPortal}
             disabled={busy}
-            style={btnSecondary}
+            style={statusRefreshButtonStyle}
           >
-            Abo verwalten
+            {language === "en" ? "Manage subscription" : "Abo verwalten"}
           </button>
         )}
 
