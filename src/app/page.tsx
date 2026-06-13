@@ -1126,40 +1126,44 @@ Target audience: creators and solopreneurs.`,
       )}
 
       {err && (
-        <div style={panelStyle}>
-          <div style={{ fontWeight: 800, marginBottom: 6, color: "#d00" }}>
-            Error
+        <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>
+          <b>
+            {err.error === "billing_not_available"
+              ? language === "en"
+                ? "Notice"
+                : "Hinweis"
+              : language === "en"
+                ? "Error"
+                : "Fehler"}
+          </b>
+
+          <div style={{ marginTop: 6 }}>
+            {err.message ||
+              err.error ||
+              (language === "en"
+                ? "Something went wrong."
+                : "Es ist ein Fehler aufgetreten.")}
           </div>
 
-          <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>
-            {err.error ? (
-              <>
-                <b>{err.error}</b>
-                {err.message ? ` - ${err.message}` : ""}
-              </>
-            ) : (
-              "Unbekannter Fehler"
-            )}
-            {Array.isArray(err.banned) && err.banned.length ? (
-              <>
-                {" "}
-                - banned: <b>{err.banned.join(", ")}</b>
-              </>
-            ) : null}
-            {Array.isArray(err.hard) && err.hard.length ? (
-              <>
-                {" "}
-                - hard: <b>{err.hard.join(", ")}</b>
-              </>
-            ) : null}
-          </div>
+          {Array.isArray(err.banned) && err.banned.length ? (
+            <div style={{ marginTop: 6 }}>
+              banned: <b>{err.banned.join(", ")}</b>
+            </div>
+          ) : null}
 
-          <pre style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 12 }}>
-            {JSON.stringify(err, null, 2)}
-          </pre>
+          {Array.isArray(err.hard) && err.hard.length ? (
+            <div style={{ marginTop: 6 }}>
+              hard: <b>{err.hard.join(", ")}</b>
+            </div>
+          ) : null}
+
+          {showDevActions && (
+            <pre style={{ whiteSpace: "pre-wrap", marginTop: 8, fontSize: 12 }}>
+              {JSON.stringify(err, null, 2)}
+            </pre>
+          )}
         </div>
       )}
-
       {output && (
         <div style={outputPanelStyle}>
           <div style={outputHeaderStyle}>
