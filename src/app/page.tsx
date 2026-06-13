@@ -1154,11 +1154,27 @@ Target audience: creators and solopreneurs.`,
           </b>
 
           <div style={{ marginTop: 6 }}>
-            {err.message ||
-              err.error ||
-              (language === "en"
-                ? "Something went wrong."
-                : "Es ist ein Fehler aufgetreten.")}
+            {(() => {
+              const msg = String(err.message || err.error || "");
+
+              if (
+                msg.toLowerCase().includes("incorrect api key") ||
+                msg.toLowerCase().includes("invalid api key") ||
+                msg.toLowerCase().includes("api_key")
+              ) {
+                return language === "en"
+                  ? "The OpenAI API key is invalid. Please check the key or enter a new one."
+                  : "Der eingegebene OpenAI API Key ist ungültig. Bitte prüfe den Key oder füge einen neuen ein.";
+              }
+
+              return (
+                err.message ||
+                err.error ||
+                (language === "en"
+                  ? "Something went wrong."
+                  : "Es ist ein Fehler aufgetreten.")
+              );
+            })()}
           </div>
 
           {Array.isArray(err.banned) && err.banned.length ? (
