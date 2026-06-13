@@ -62,7 +62,7 @@ function safeUUID() {
  * COMPONENT
  */
 export default function Home() {
-  // IdentitÃ¤t (UI-override, wird auch in localStorage gespiegelt)
+  // Identität (UI-override, wird auch in localStorage gespiegelt)
   const [accountId, setAccountId] = useState("");
   const [userId, setUserId] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -71,7 +71,7 @@ export default function Home() {
   const [useCase, setUseCase] = useState("Landingpage / Ad-Copy");
   const [tone, setTone] = useState("Professionell");
   const [goal, setGoal] = useState(
-    "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
+    "GLE Prompt Studio - KI-Tool für Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
   );
   const [context, setContext] =
     useState(`Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
@@ -117,7 +117,7 @@ Keine Emojis. Kein Meta-Gerede.`);
     { goal: string; context: string }
   > = {
     de: {
-      goal: "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
+      goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
       context: `Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
 Format exakt so:
 
@@ -146,7 +146,7 @@ Qualitätsregeln:
 Keine Emojis. Kein Meta-Gerede.`,
     },
     en: {
-      goal: "GLE Prompt Studio â€“ AI tool for creators and solopreneurs: social posts, ads and landing pages in seconds (Early Access)",
+      goal: "GLE Prompt Studio - AI tool for creators and solopreneurs: social posts, ads and landing pages in seconds (Early Access)",
       context: `Write a typical SaaS hero section + bullet points.
 Use exactly this format:
 
@@ -158,7 +158,7 @@ Use exactly this format:
 
 Information that must be included:
 - Early Access / waitlist is open
-- Future price: 19.99â‚¬/month
+- Future price: 19.99€/month
 - Target audience: creators and solopreneurs
 - less time wasted, faster content, consistent quality
 
@@ -171,7 +171,7 @@ No emojis. No meta talk.`,
       return nextLanguage === "en"
         ? {
             goal:
-              "GLE Prompt Studio â€“ AI tool for creators and solopreneurs launching Early Access",
+              "GLE Prompt Studio - AI tool for creators and solopreneurs launching Early Access",
             context: `Create a social media post for Instagram or LinkedIn.
 Use exactly this format:
 
@@ -182,7 +182,7 @@ Use exactly this format:
 
 Information that must be included:
 - Early Access / waitlist is open
-- Future price: 19.99â‚¬/month
+- Future price: 19.99€/month
 - Target audience: creators and solopreneurs
 - less time wasted, faster content, consistent quality
 
@@ -190,8 +190,8 @@ No emojis. No meta talk.`,
           }
         : {
             goal:
-              "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
-            context: `Erstelle einen Social-Media-Post fÃ¼r Instagram oder LinkedIn.
+              "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
+            context: `Erstelle einen Social-Media-Post für Instagram oder LinkedIn.
 Format exakt so:
 
 1) Hook
@@ -199,11 +199,11 @@ Format exakt so:
 3) 4 Bulletpoints
 4) CTA
 
-Infos, die rein mÃ¼ssen:
+Infos, die rein müssen:
 - Early Access / Warteliste offen
-- Preis spÃ¤ter 19,99â‚¬/Monat
+- Preis später 19,99€/Monat
 - Zielgruppe: Creator & Solopreneure
-- weniger Zeitverlust, schneller Content, konsistente QualitÃ¤t
+- weniger Zeitverlust, schneller Content, konsistente Qualität
 
 Keine Emojis. Kein Meta-Gerede.`,
           };
@@ -213,7 +213,7 @@ Keine Emojis. Kein Meta-Gerede.`,
       return nextLanguage === "en"
         ? {
             goal:
-              "GLE Prompt Studio â€“ AI tool for creators and solopreneurs in Early Access",
+              "GLE Prompt Studio - AI tool for creators and solopreneurs in Early Access",
             context: `Create a LinkedIn post.
 Use exactly this format:
 
@@ -227,27 +227,27 @@ Information that must be included:
 - GLE Prompt Studio helps creators and solopreneurs prepare content faster
 - It supports social posts, ads and landing pages
 - Early Access / waitlist is open
-- Future price: 19.99â‚¬/month
+- Future price: 19.99€/month
 
 No emojis. No hashtags. No meta talk.`,
           }
         : {
             goal:
-              "GLE Prompt Studio â€“ KI-Tool fÃ¼r Creator & Solopreneure im Early Access",
+              "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
             context: `Erstelle einen LinkedIn-Post.
 Format exakt so:
 
 1) Starker Einstiegssatz
 2) kurzer Haupttext
 3) 3 klare Bulletpoints
-4) abschlieÃŸender Gedanke
+4) abschließender Gedanke
 5) CTA
 
-Infos, die rein mÃ¼ssen:
+Infos, die rein müssen:
 - GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
-- Es unterstÃ¼tzt Social Posts, Ads und Landingpages
+- Es unterstützt Social Posts, Ads und Landingpages
 - Early Access / Warteliste offen
-- Preis spÃ¤ter 19,99â‚¬/Monat
+- Preis später 19,99€/Monat
 
 Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
           };
@@ -328,7 +328,7 @@ Keine Emojis. Kein Meta-Gerede.`,
       return nextLanguage === "en"
         ? {
             goal:
-              "GLE Prompt Studio â€“ product description for creators and solopreneurs",
+              "GLE Prompt Studio - product description for creators and solopreneurs",
             context: `Create a product description.
 Use exactly this format:
 
@@ -342,27 +342,27 @@ Information that must be included:
 - GLE Prompt Studio helps creators and solopreneurs prepare content faster
 - It supports social posts, ads and landing pages
 - Early Access / waitlist is open
-- Future price: 19.99â‚¬/month
+- Future price: 19.99€/month
 
 No emojis. No hashtags. No meta talk.`,
           }
         : {
             goal:
-              "GLE Prompt Studio â€“ Produktbeschreibung fÃ¼r Creator & Solopreneure",
+              "GLE Prompt Studio - Produktbeschreibung für Creator & Solopreneure",
             context: `Erstelle eine Produktbeschreibung.
 Format exakt so:
 
 1) Produktname
 2) Kurzbeschreibung
 3) 5 Vorteile
-4) FÃ¼r wen geeignet
+4) Für wen geeignet
 5) CTA
 
-Infos, die rein mÃ¼ssen:
+Infos, die rein müssen:
 - GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
-- Es unterstÃ¼tzt Social Posts, Ads und Landingpages
+- Es unterstützt Social Posts, Ads und Landingpages
 - Early Access / Warteliste offen
-- Preis spÃ¤ter 19,99â‚¬/Monat
+- Preis später 19,99€/Monat
 
 Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
           };
@@ -375,12 +375,12 @@ Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
 - Zielgruppe
 - wichtigster Nutzen
 - Preis oder Early-Access-Hinweis
-- gewÃ¼nschte CTA
+- gewünschte CTA
 
 Beispiel:
-GLE Prompt Studio ist ein Tool fÃ¼r Creator und Solopreneure.
-Es erstellt strukturierte EntwÃ¼rfe fÃ¼r Social Posts, Ads und Landingpages.
-Early Access ist geÃ¶ffnet, Preis spÃ¤ter 19,99â‚¬/Monat.
+GLE Prompt Studio ist ein Tool für Creator und Solopreneure.
+Es erstellt strukturierte Entwürfe für Social Posts, Ads und Landingpages.
+Early Access ist geöffnet, Preis später 19,99€/Monat.
 CTA: Zur Warteliste.`,
 
     "Social Media Post": `Was du eintragen solltest:
@@ -388,10 +388,10 @@ CTA: Zur Warteliste.`,
 - Thema
 - Zielgruppe
 - Kernaussage
-- gewÃ¼nschte LÃ¤nge oder Stil
+- gewünschte Länge oder Stil
 
 Beispiel:
-Instagram-Post fÃ¼r GLE Prompt Studio.
+Instagram-Post für GLE Prompt Studio.
 Zielgruppe: Creator und Solopreneure.
 Aussage: Weniger Zeitverlust bei der Content-Erstellung.
 Ton: direkt und motivierend.`,
@@ -399,13 +399,13 @@ Ton: direkt und motivierend.`,
     "LinkedIn Post": `Was du eintragen solltest:
 - Thema
 - Zielgruppe
-- persÃ¶nliche Perspektive oder Fachmeinung
-- gewÃ¼nschte Aussage
+- persönliche Perspektive oder Fachmeinung
+- gewünschte Aussage
 - CTA oder Diskussionsfrage
 
 Beispiel:
-LinkedIn-Post Ã¼ber produktiveres Arbeiten mit KI.
-Zielgruppe: Solo-SelbststÃ¤ndige.
+LinkedIn-Post über produktiveres Arbeiten mit KI.
+Zielgruppe: Solo-Selbstständige.
 Aussage: Gute Prompts sparen Zeit und bringen Struktur.`,
 
     Produktbeschreibung: `Was du eintragen solltest:
@@ -416,32 +416,32 @@ Aussage: Gute Prompts sparen Zeit und bringen Struktur.`,
 - Preis oder Angebot
 
 Beispiel:
-Produktbeschreibung fÃ¼r GLE Prompt Studio.
+Produktbeschreibung für GLE Prompt Studio.
 Zielgruppe: Creator und Solopreneure.
 Vorteile: schneller strukturierte Inhalte, klare Formate, weniger Zeitverlust.`,
 
     "E-Mail": `Was du eintragen solltest:
-- EmpfÃ¤nger/Zielgruppe
+- Empfänger/Zielgruppe
 - Ziel der E-Mail
 - Kernaussage
-- gewÃ¼nschte CTA
+- gewünschte CTA
 - Ton
 
 Beispiel:
 E-Mail an Interessenten der Warteliste.
-Ziel: Early Access erklÃ¤ren.
+Ziel: Early Access erklären.
 CTA: Zur Warteliste anmelden.`,
 
     Blogartikel: `Was du eintragen solltest:
 - Thema
 - Zielgruppe
-- gewÃ¼nschte Struktur
+- gewünschte Struktur
 - Hauptpunkte
 - SEO-Keyword falls vorhanden
 
 Beispiel:
-Blogartikel Ã¼ber Content-Erstellung mit KI.
-Zielgruppe: Solo-SelbststÃ¤ndige.
+Blogartikel über Content-Erstellung mit KI.
+Zielgruppe: Solo-Selbstständige.
 Hauptpunkte: Zeit sparen, bessere Struktur, wiederholbare Prozesse.`,
 
     "Kurzvideo-Skript": `Was du eintragen solltest:
@@ -449,10 +449,10 @@ Hauptpunkte: Zeit sparen, bessere Struktur, wiederholbare Prozesse.`,
 - Thema
 - Zielgruppe
 - Hook-Idee
-- gewÃ¼nschte LÃ¤nge
+- gewünschte Länge
 
 Beispiel:
-TikTok/Reel Ã¼ber GLE Prompt Studio.
+TikTok/Reel über GLE Prompt Studio.
 Hook: Du verlierst zu viel Zeit beim Content-Erstellen?
 Zielgruppe: Creator und Solopreneure.`,
   };
@@ -468,7 +468,7 @@ Zielgruppe: Creator und Solopreneure.`,
 Example:
 GLE Prompt Studio is a tool for creators and solopreneurs.
 It creates structured drafts for social posts, ads and landing pages.
-Early Access is open, future price 19.99â‚¬/month.
+Early Access is open, future price 19.99€/month.
 CTA: Join the waitlist.`,
 
     "Social Media Post": `What you should enter:
@@ -548,7 +548,7 @@ Target audience: creators and solopreneurs.`,
     (language === "en" ? useCaseHelpEn : useCaseHelp)[useCase] ||
     (language === "en"
       ? "Briefly describe the topic, target audience, desired result and important details."
-      : "Beschreibe kurz Thema, Zielgruppe, gewÃ¼nschtes Ergebnis und wichtige Details.");
+      : "Beschreibe kurz Thema, Zielgruppe, gewünschtes Ergebnis und wichtige Details.");
 
   const uiText =
     language === "en"
@@ -575,7 +575,7 @@ Target audience: creators and solopreneurs.`,
       const u = localStorage.getItem(LS_USER);
       const k = localStorage.getItem(LS_APIKEY);
 
-      // Falls noch nix da ist: initial befÃ¼llen
+      // Falls noch nix da ist: initial befüllen
       if (!a) localStorage.setItem(LS_ACCOUNT, `acc_${safeUUID()}`);
       if (!u) localStorage.setItem(LS_USER, `u_${safeUUID()}`);
 
@@ -600,7 +600,7 @@ Target audience: creators and solopreneurs.`,
     return () => window.clearInterval(timer);
   }, [busy]);
 
-  // Spiegeln: UI â†’ localStorage (damit Backend/Headers konstant bleiben)
+  // Spiegeln: UI -> localStorage (damit Backend/Headers konstant bleiben)
   useEffect(() => {
     try {
       if (accountId) localStorage.setItem(LS_ACCOUNT, accountId);
@@ -613,12 +613,12 @@ Target audience: creators and solopreneurs.`,
 
   const [engineLabel, setEngineLabel] = useState("");
 
-  // Headers (override account/user, weil buildIdentityHeaders standardmÃ¤ÃŸig localStorage liest)
+  // Headers (override account/user, weil buildIdentityHeaders standardmäßig localStorage liest)
   const headers = useMemo(() => {
     const extra: Record<string, string> = {};
     if (apiKey) extra["x-gle-api-key"] = apiKey;
 
-    // Overrides (wichtig: nur setzen, wenn gefÃ¼llt)
+    // Overrides (wichtig: nur setzen, wenn gefüllt)
     if (accountId) extra["x-gle-account-id"] = accountId;
     if (userId) extra["x-gle-user-id"] = userId;
 
@@ -753,7 +753,7 @@ Target audience: creators and solopreneurs.`,
   return (
     <main style={pageWrap}>
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
-        GLE Prompt Studio â€” Generator
+        GLE Prompt Studio - Generator
       </h1>
 
       {/* ID SECTION */}
@@ -803,13 +803,13 @@ Target audience: creators and solopreneurs.`,
         }}
       >
         <div style={pill}>
-          Plan: <b>{me?.plan ?? "â€”"}</b> Â· Used: <b>{me?.usage?.used ?? "â€”"}</b>{" "}
-          / <b>{limit ?? "â€”"}</b>
+          Plan: <b>{me?.plan ?? "-"}</b> - Used: <b>{me?.usage?.used ?? "-"}</b>{" "}
+          / <b>{limit ?? "-"}</b>
           {me?.plan === "PRO" ? (
             <>
               {" "}
-              Â· Boost: <b>{me?.usage?.boostUsed ?? "â€”"}</b> /{" "}
-              <b>{me?.limits?.PRO_BOOST_LIMIT ?? "â€”"}</b>
+              - Boost: <b>{me?.usage?.boostUsed ?? "-"}</b> /{" "}
+              <b>{me?.limits?.PRO_BOOST_LIMIT ?? "-"}</b>
             </>
           ) : null}
         </div>
@@ -855,15 +855,15 @@ Target audience: creators and solopreneurs.`,
               setOutput("");
               setErr(null);
             }}
-            style={inputStyle}
+            style={blueSelectStyle}
           >
-            <option value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
-            <option value="Social Media Post">Social Media Post</option>
-            <option value="LinkedIn Post">LinkedIn Post</option>
-            <option value="Produktbeschreibung">Produktbeschreibung</option>
-            <option value="E-Mail">E-Mail</option>
-            <option value="Blogartikel">Blogartikel</option>
-            <option value="Kurzvideo-Skript">Kurzvideo-Skript</option>
+            <option style={blueOptionStyle} value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
+            <option style={blueOptionStyle} value="Social Media Post">Social Media Post</option>
+            <option style={blueOptionStyle} value="LinkedIn Post">LinkedIn Post</option>
+            <option style={blueOptionStyle} value="Produktbeschreibung">Produktbeschreibung</option>
+            <option style={blueOptionStyle} value="E-Mail">E-Mail</option>
+            <option style={blueOptionStyle} value="Blogartikel">Blogartikel</option>
+            <option style={blueOptionStyle} value="Kurzvideo-Skript">Kurzvideo-Skript</option>
           </select>
         </label>
 
@@ -872,14 +872,14 @@ Target audience: creators and solopreneurs.`,
           <select
             value={tone}
             onChange={(e) => setTone(e.target.value)}
-            style={inputStyle}
+            style={blueSelectStyle}
           >
-            <option value="Professionell">Professionell</option>
-            <option value="Direkt">Direkt</option>
-            <option value="Locker">Locker</option>
-            <option value="Verkaufstark">Verkaufstark</option>
-            <option value="Motivierend">Motivierend</option>
-            <option value="Neutral">Neutral</option>
+            <option style={blueOptionStyle} value="Professionell">Professionell</option>
+            <option style={blueOptionStyle} value="Direkt">Direkt</option>
+            <option style={blueOptionStyle} value="Locker">Locker</option>
+            <option style={blueOptionStyle} value="Verkaufstark">Verkaufstark</option>
+            <option style={blueOptionStyle} value="Motivierend">Motivierend</option>
+            <option style={blueOptionStyle} value="Neutral">Neutral</option>
           </select>
         </label>
 
@@ -926,7 +926,7 @@ Target audience: creators and solopreneurs.`,
       <div style={{ height: 10 }} />
 
       <label>
-        <div style={labelSmall}>Details & gewÃ¼nschtes Format</div>
+        <div style={labelSmall}>Details & gewünschtes Format</div>
         <textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
@@ -982,9 +982,9 @@ Target audience: creators and solopreneurs.`,
           >
             {
               [
-                "Analyse lÃ¤uft",
+                "Analyse läuft",
                 "Struktur wird gebaut",
-                "Optimierung lÃ¤uft",
+                "Optimierung läuft",
                 "Finalisierung",
               ][loadingStep]
             }
@@ -1023,7 +1023,7 @@ Target audience: creators and solopreneurs.`,
             {err.error ? (
               <>
                 <b>{err.error}</b>
-                {err.message ? ` â€” ${err.message}` : ""}
+                {err.message ? ` - ${err.message}` : ""}
               </>
             ) : (
               "Unbekannter Fehler"
@@ -1031,13 +1031,13 @@ Target audience: creators and solopreneurs.`,
             {Array.isArray(err.banned) && err.banned.length ? (
               <>
                 {" "}
-                Â· banned: <b>{err.banned.join(", ")}</b>
+                - banned: <b>{err.banned.join(", ")}</b>
               </>
             ) : null}
             {Array.isArray(err.hard) && err.hard.length ? (
               <>
                 {" "}
-                Â· hard: <b>{err.hard.join(", ")}</b>
+                - hard: <b>{err.hard.join(", ")}</b>
               </>
             ) : null}
           </div>
@@ -1102,6 +1102,20 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid #ddd",
   outline: "none",
 };
+
+const blueSelectStyle: React.CSSProperties = {
+  ...inputStyle,
+  background: "#0066cc",
+  color: "#ffffff",
+  border: "1px solid #0052a3",
+  cursor: "pointer",
+};
+
+const blueOptionStyle: React.CSSProperties = {
+  background: "#0066cc",
+  color: "#ffffff",
+};
+
 
 const textareaStyle: React.CSSProperties = {
   ...inputStyle,
