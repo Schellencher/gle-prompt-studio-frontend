@@ -639,6 +639,20 @@ Target audience: creators and solopreneurs.`,
   async function onGenerate() {
     const startedAt = Date.now();
 
+    if (!String(goal || "").trim()) {
+      setOutput("");
+      setCopied(false);
+      setErr({
+        ok: false,
+        error: "missing_topic",
+        message:
+          language === "en"
+            ? "Please enter a topic or offer first."
+            : "Bitte gib zuerst ein Thema oder Angebot ein.",
+      });
+      return;
+    }
+
     setBusy(true);
     setErr(null);
     setOutput("");
