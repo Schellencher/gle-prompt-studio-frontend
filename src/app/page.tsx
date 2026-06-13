@@ -831,7 +831,7 @@ Target audience: creators and solopreneurs.`,
           ) : null}
         </div>
 
-        <button onClick={refreshMe} disabled={busy} style={btnSecondary}>
+        <button onClick={refreshMe} disabled={busy} style={statusRefreshButtonStyle}>
           Aktualisieren
         </button>
 
@@ -1170,3 +1170,29 @@ const panelStyle: React.CSSProperties = {
   border: "1px solid #e2e2e2",
   borderRadius: 10,
 };
+
+const statusCardStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginTop: 14,
+  marginBottom: 18,
+  padding: "10px 12px",
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  background: "#f9fafb",
+};
+
+const statusTextStyle: React.CSSProperties = {
+  fontSize: 13,
+  opacity: 0.9,
+};
+
+const statusRefreshButtonStyle: React.CSSProperties = {
+  ...btnSecondary,
+  padding: "7px 10px",
+  fontSize: 12,
+  borderRadius: 10,
+};
+
