@@ -704,6 +704,29 @@ Target audience: creators and solopreneurs.`,
     }
   }
 
+  async function onBillingPortal() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await apiPost<{ url: string }>(
+        "/api/billing-portal",
+        { accountId, userId },
+        headers,
+      );
+
+      if (res.ok) window.location.href = res.url;
+      else setErr(res as AnyErr);
+    } catch (e: any) {
+      setErr({
+        ok: false,
+        error: "client_error",
+        message: e?.message || String(e),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function resetIds() {
     const newAcc = `acc_${safeUUID()}`;
     const newUser = `u_${safeUUID()}`;
