@@ -172,8 +172,7 @@ No emojis. No meta talk.`,
     if (nextUseCase === "Social Media Post") {
       return nextLanguage === "en"
         ? {
-            goal:
-              "GLE Prompt Studio - AI tool for creators and solopreneurs launching Early Access",
+            goal: "GLE Prompt Studio - AI tool for creators and solopreneurs launching Early Access",
             context: `Create a social media post for Instagram or LinkedIn.
 Use exactly this format:
 
@@ -191,8 +190,7 @@ Information that must be included:
 No emojis. No meta talk.`,
           }
         : {
-            goal:
-              "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
+            goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
             context: `Erstelle einen Social-Media-Post für Instagram oder LinkedIn.
 Format exakt so:
 
@@ -214,8 +212,7 @@ Keine Emojis. Kein Meta-Gerede.`,
     if (nextUseCase === "LinkedIn Post") {
       return nextLanguage === "en"
         ? {
-            goal:
-              "GLE Prompt Studio - AI tool for creators and solopreneurs in Early Access",
+            goal: "GLE Prompt Studio - AI tool for creators and solopreneurs in Early Access",
             context: `Create a LinkedIn post.
 Use exactly this format:
 
@@ -234,8 +231,7 @@ Information that must be included:
 No emojis. No hashtags. No meta talk.`,
           }
         : {
-            goal:
-              "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
+            goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
             context: `Erstelle einen LinkedIn-Post.
 Format exakt so:
 
@@ -257,8 +253,7 @@ Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
     if (nextUseCase === "E-Mail") {
       return nextLanguage === "en"
         ? {
-            goal:
-              "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
+            goal: "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
             context: `Create a short marketing email.
 Use exactly this format:
 
@@ -291,8 +286,7 @@ Quality rules:
 No emojis. No meta talk.`,
           }
         : {
-            goal:
-              "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
+            goal: "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
             context: `Erstelle eine kurze Marketing-E-Mail.
 Format exakt so:
 
@@ -329,8 +323,7 @@ Keine Emojis. Kein Meta-Gerede.`,
     if (nextUseCase === "Produktbeschreibung") {
       return nextLanguage === "en"
         ? {
-            goal:
-              "GLE Prompt Studio - product description for creators and solopreneurs",
+            goal: "GLE Prompt Studio - product description for creators and solopreneurs",
             context: `Create a product description.
 Use exactly this format:
 
@@ -349,8 +342,7 @@ Information that must be included:
 No emojis. No hashtags. No meta talk.`,
           }
         : {
-            goal:
-              "GLE Prompt Studio - Produktbeschreibung für Creator & Solopreneure",
+            goal: "GLE Prompt Studio - Produktbeschreibung für Creator & Solopreneure",
             context: `Erstelle eine Produktbeschreibung.
 Format exakt so:
 
@@ -771,7 +763,9 @@ Target audience: creators and solopreneurs.`,
             textDecoration: "underline",
           }}
         >
-          {showDevTools ? "Entwickler-Optionen ausblenden" : "Entwickler-Optionen anzeigen"}
+          {showDevTools
+            ? "Entwickler-Optionen ausblenden"
+            : "Entwickler-Optionen anzeigen"}
         </button>
       </div>
 
@@ -832,7 +826,11 @@ Target audience: creators and solopreneurs.`,
           ) : null}
         </div>
 
-        <button onClick={refreshMe} disabled={busy} style={statusRefreshButtonStyle}>
+        <button
+          onClick={refreshMe}
+          disabled={busy}
+          style={statusRefreshButtonStyle}
+        >
           Aktualisieren
         </button>
 
@@ -875,13 +873,27 @@ Target audience: creators and solopreneurs.`,
             }}
             style={blueSelectStyle}
           >
-            <option style={blueOptionStyle} value="Landingpage / Ad-Copy">Landingpage / Ad-Copy</option>
-            <option style={blueOptionStyle} value="Social Media Post">Social Media Post</option>
-            <option style={blueOptionStyle} value="LinkedIn Post">LinkedIn Post</option>
-            <option style={blueOptionStyle} value="Produktbeschreibung">Produktbeschreibung</option>
-            <option style={blueOptionStyle} value="E-Mail">E-Mail</option>
-            <option style={blueOptionStyle} value="Blogartikel">Blogartikel</option>
-            <option style={blueOptionStyle} value="Kurzvideo-Skript">Kurzvideo-Skript</option>
+            <option style={blueOptionStyle} value="Landingpage / Ad-Copy">
+              Landingpage / Ad-Copy
+            </option>
+            <option style={blueOptionStyle} value="Social Media Post">
+              Social Media Post
+            </option>
+            <option style={blueOptionStyle} value="LinkedIn Post">
+              LinkedIn Post
+            </option>
+            <option style={blueOptionStyle} value="Produktbeschreibung">
+              Produktbeschreibung
+            </option>
+            <option style={blueOptionStyle} value="E-Mail">
+              E-Mail
+            </option>
+            <option style={blueOptionStyle} value="Blogartikel">
+              Blogartikel
+            </option>
+            <option style={blueOptionStyle} value="Kurzvideo-Skript">
+              Kurzvideo-Skript
+            </option>
           </select>
         </label>
 
@@ -892,12 +904,24 @@ Target audience: creators and solopreneurs.`,
             onChange={(e) => setTone(e.target.value)}
             style={blueSelectStyle}
           >
-            <option style={blueOptionStyle} value="Professionell">Professionell</option>
-            <option style={blueOptionStyle} value="Direkt">Direkt</option>
-            <option style={blueOptionStyle} value="Locker">Locker</option>
-            <option style={blueOptionStyle} value="Verkaufstark">Verkaufstark</option>
-            <option style={blueOptionStyle} value="Motivierend">Motivierend</option>
-            <option style={blueOptionStyle} value="Neutral">Neutral</option>
+            <option style={blueOptionStyle} value="Professionell">
+              Professionell
+            </option>
+            <option style={blueOptionStyle} value="Direkt">
+              Direkt
+            </option>
+            <option style={blueOptionStyle} value="Locker">
+              Locker
+            </option>
+            <option style={blueOptionStyle} value="Verkaufstark">
+              Verkaufstark
+            </option>
+            <option style={blueOptionStyle} value="Motivierend">
+              Motivierend
+            </option>
+            <option style={blueOptionStyle} value="Neutral">
+              Neutral
+            </option>
           </select>
         </label>
 
@@ -964,7 +988,9 @@ Target audience: creators and solopreneurs.`,
             textDecoration: "underline",
           }}
         >
-          {showPromptDetails ? "Detail-Regeln ausblenden" : "Detail-Regeln anzeigen"}
+          {showPromptDetails
+            ? "Detail-Regeln ausblenden"
+            : "Detail-Regeln anzeigen"}
         </button>
       </div>
 
@@ -993,7 +1019,9 @@ Target audience: creators and solopreneurs.`,
           whiteSpace: "pre-line",
         }}
       >
-        {showPromptDetails ? activeUseCaseHelp : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
+        {showPromptDetails
+          ? activeUseCaseHelp
+          : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
       </div>
 
       <div
@@ -1005,7 +1033,7 @@ Target audience: creators and solopreneurs.`,
         }}
       >
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
-          {busy ? "..." : uiText.generate}
+          {busy ? "Prompt wird erstellt..." : uiText.generate}
         </button>
 
         <button onClick={copyOutput} disabled={!output} style={btnSecondary}>
@@ -1169,7 +1197,6 @@ const blueOptionStyle: React.CSSProperties = {
   color: "#ffffff",
 };
 
-
 const textareaStyle: React.CSSProperties = {
   ...inputStyle,
   fontFamily: "ui-monospace, monospace",
@@ -1230,4 +1257,3 @@ const statusRefreshButtonStyle: React.CSSProperties = {
   fontSize: 12,
   borderRadius: 10,
 };
-
