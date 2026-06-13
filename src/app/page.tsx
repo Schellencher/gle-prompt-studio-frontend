@@ -66,6 +66,7 @@ export default function Home() {
   const [accountId, setAccountId] = useState("");
   const [userId, setUserId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [showDevTools, setShowDevTools] = useState(false);
 
   // Formular
   const [useCase, setUseCase] = useState("Landingpage / Ad-Copy");
