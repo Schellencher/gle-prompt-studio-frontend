@@ -996,7 +996,14 @@ Target audience: creators and solopreneurs.`,
         {showPromptDetails ? activeUseCaseHelp : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          marginTop: 16,
+          alignItems: "center",
+        }}
+      >
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
           {busy ? "..." : uiText.generate}
         </button>
