@@ -1106,14 +1106,15 @@ const inputStyle: React.CSSProperties = {
 
 const blueSelectStyle: React.CSSProperties = {
   ...inputStyle,
-  background: "#0066cc",
+  background: "#111827",
   color: "#ffffff",
-  border: "1px solid #0052a3",
+  border: "1px solid #374151",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
   cursor: "pointer",
 };
 
 const blueOptionStyle: React.CSSProperties = {
-  background: "#0066cc",
+  background: "#111827",
   color: "#ffffff",
 };
 
