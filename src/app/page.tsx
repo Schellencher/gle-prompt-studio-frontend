@@ -1038,8 +1038,16 @@ Target audience: creators and solopreneurs.`,
           {busy ? "Prompt wird erstellt..." : uiText.generate}
         </button>
 
-        <button onClick={copyOutput} disabled={!output} style={btnSecondary}>
-          {uiText.copy}
+        <button
+          onClick={() => {
+            copyOutput();
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1400);
+          }}
+          disabled={!output}
+          style={btnSecondary}
+        >
+          {copied ? "KOPIERT!" : uiText.copy}
         </button>
       </div>
 
