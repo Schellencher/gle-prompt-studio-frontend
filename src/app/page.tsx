@@ -758,7 +758,23 @@ Target audience: creators and solopreneurs.`,
       </h1>
 
       {/* ID SECTION */}
-      <div style={grid3}>
+      <div style={{ textAlign: "right", marginBottom: 12 }}>
+        <button
+          onClick={() => setShowDevTools(!showDevTools)}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "#9ca3af",
+            fontSize: 12,
+            cursor: "pointer",
+            textDecoration: "underline",
+          }}
+        >
+          {showDevTools ? "Entwickler-Optionen ausblenden" : "Entwickler-Optionen anzeigen"}
+        </button>
+      </div>
+
+      <div style={{ ...grid3, display: showDevTools ? "grid" : "none" }}>
         <label>
           <div style={labelSmall}>Account ID</div>
           <input
