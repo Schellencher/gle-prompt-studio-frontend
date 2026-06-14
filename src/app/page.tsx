@@ -1205,25 +1205,35 @@ Gewünschte Ausgabe-Struktur:
             style={blueSelectStyle}
           >
             <option style={blueOptionStyle} value="Landingpage / Ad-Copy">
-              Landingpage / Ad-Copy
+              {language === "en"
+                ? "Landing page / Ad copy"
+                : "Landingpage / Ad-Copy"}
             </option>
+
             <option style={blueOptionStyle} value="Social Media Post">
               Social Media Post
             </option>
+
             <option style={blueOptionStyle} value="LinkedIn Post">
               LinkedIn Post
             </option>
+
             <option style={blueOptionStyle} value="Produktbeschreibung">
-              Produktbeschreibung
+              {language === "en"
+                ? "Product description"
+                : "Produktbeschreibung"}
             </option>
+
             <option style={blueOptionStyle} value="E-Mail">
-              E-Mail
+              {language === "en" ? "Email" : "E-Mail"}
             </option>
+
             <option style={blueOptionStyle} value="Blogartikel">
-              Blogartikel
+              {language === "en" ? "Blog article" : "Blogartikel"}
             </option>
+
             <option style={blueOptionStyle} value="Kurzvideo-Skript">
-              Kurzvideo-Skript
+              {language === "en" ? "Short video script" : "Kurzvideo-Skript"}
             </option>
           </select>
         </label>
@@ -1235,23 +1245,28 @@ Gewünschte Ausgabe-Struktur:
             onChange={(e) => setTone(e.target.value)}
             style={blueSelectStyle}
           >
-            <option style={blueOptionStyle} value="Professionell">
-              Professionell
-            </option>
-            <option style={blueOptionStyle} value="Direkt">
-              Direkt
-            </option>
-            <option style={blueOptionStyle} value="Locker">
-              Locker
-            </option>
-            <option style={blueOptionStyle} value="Verkaufstark">
-              Verkaufstark
-            </option>
-            <option style={blueOptionStyle} value="Motivierend">
-              Motivierend
-            </option>
             <option style={blueOptionStyle} value="Neutral">
               Neutral
+            </option>
+
+            <option style={blueOptionStyle} value="Professionell">
+              {language === "en" ? "Professional" : "Professionell"}
+            </option>
+
+            <option style={blueOptionStyle} value="Locker">
+              {language === "en" ? "Casual" : "Locker"}
+            </option>
+
+            <option style={blueOptionStyle} value="Motivierend">
+              {language === "en" ? "Motivating" : "Motivierend"}
+            </option>
+
+            <option style={blueOptionStyle} value="Verkaufstark">
+              {language === "en" ? "Sales-focused" : "Verkaufstark"}
+            </option>
+
+            <option style={blueOptionStyle} value="Direkt">
+              {language === "en" ? "Direct" : "Direkt"}
             </option>
           </select>
         </label>
