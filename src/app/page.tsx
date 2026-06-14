@@ -72,9 +72,7 @@ export default function Home() {
   // Formular
   const [useCase, setUseCase] = useState("Landingpage / Ad-Copy");
   const [tone, setTone] = useState("Professionell");
-  const [goal, setGoal] = useState(
-    "GLE Prompt Studio - KI-Tool für Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
-  );
+  const [goal, setGoal] = useState("");
   const [context, setContext] =
     useState(`Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
 Format exakt so:
