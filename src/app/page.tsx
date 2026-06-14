@@ -1209,28 +1209,41 @@ Target audience: creators and solopreneurs.`,
   );
 }
 
-/**
- * STYLES
- */
+// ==========================================
+// STYLES (FINALE FEHLERFREIE PREMIUM-VERSION)
+// ==========================================
+
+// REPARATUR FEHLER 1: Bringt pageWrap zurück
 const pageWrap: React.CSSProperties = {
-  maxWidth: 980,
-  margin: "0 auto",
-  padding: 20,
+  maxWidth: 800,
+  margin: "40px auto",
+  padding: "30px",
+  backgroundColor: "#0b0c10",
+  color: "#f1f1f3",
+  borderRadius: "16px",
+  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.7)",
   fontFamily: "system-ui, sans-serif",
 };
 
-const labelSmall: React.CSSProperties = { fontSize: 12, opacity: 0.8 };
+const labelSmall: React.CSSProperties = {
+  fontSize: 12,
+  opacity: 0.8,
+  marginBottom: 4,
+  display: "block",
+};
 
+// REPARATUR FEHLER 2: Definiert grid3 für die einklappbaren IDs
 const grid3: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr 1fr",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 12,
   marginBottom: 12,
 };
 
+// REPARATUR FEHLER 3 & 4: Nur noch EINE Zuweisung für gridConfig
 const gridConfig: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr 120px 120px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
   gap: 12,
   marginBottom: 12,
 };
@@ -1239,21 +1252,25 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid #ddd",
+  border: "1px solid #2d2d34",
+  backgroundColor: "#16161a",
+  color: "#ffffff",
   outline: "none",
 };
 
 const blueSelectStyle: React.CSSProperties = {
   ...inputStyle,
-  background: "#111827",
-  color: "#ffffff",
-  border: "1px solid #374151",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
+  appearance: "none",
+  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 12px center",
+  backgroundSize: "14px",
+  paddingRight: "40px",
   cursor: "pointer",
 };
 
 const blueOptionStyle: React.CSSProperties = {
-  background: "#111827",
+  background: "#16161a",
   color: "#ffffff",
 };
 
@@ -1287,10 +1304,11 @@ const pill: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  marginTop: 14,
-  padding: 12,
-  border: "1px solid #e2e2e2",
-  borderRadius: 10,
+  marginTop: 18,
+  padding: 16,
+  border: "1px solid #1f2026",
+  backgroundColor: "#12131a",
+  borderRadius: "12px",
 };
 
 const statusCardStyle: React.CSSProperties = {
@@ -1301,9 +1319,9 @@ const statusCardStyle: React.CSSProperties = {
   marginTop: 14,
   marginBottom: 18,
   padding: "10px 12px",
-  border: "1px solid #e5e7eb",
+  border: "1px solid #1f2026",
   borderRadius: 12,
-  background: "#f9fafb",
+  background: "#12131a",
 };
 
 const statusTextStyle: React.CSSProperties = {
