@@ -855,6 +855,8 @@ Quality rules:
 - The post must be specific to the topic/offer above.
 - Do not write generic motivational text.
 - Every bullet must describe a concrete benefit.
+- After the hook, include one short transition sentence before the bullet points.
+- The output must clearly contain a hook, short main text, 4 bullet points and a CTA.
 - Do not mix CTA and benefits.
 - Keep it clear, direct and useful.
 - No emojis unless explicitly requested.
@@ -877,6 +879,8 @@ Qualitätsregeln:
 - Der Post muss konkret zum oben genannten Thema/Angebot passen.
 - Kein allgemeiner Motivationsspruch.
 - Jeder Bulletpoint muss einen konkreten Nutzen beschreiben.
+- Nach dem Hook muss ein kurzer Übergangssatz mit 1 Satz stehen, bevor die Bulletpoints starten.
+- Die Ausgabe muss klar aus Hook, kurzem Haupttext, 4 Bulletpoints und CTA bestehen.
 - Keine vermischten CTA- und Vorteilssätze.
 - Schreibe klar, direkt und nützlich.
 - Keine Emojis, außer ausdrücklich gewünscht.
