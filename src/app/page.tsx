@@ -783,7 +783,16 @@ Target audience: creators and solopreneurs.`,
 
   return (
     <main style={pageWrap}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
+      <h1
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          marginBottom: 10,
+          color: "#bbf7d0",
+          letterSpacing: "-0.02em",
+          textShadow: "0 0 18px rgba(34, 197, 94, 0.28)",
+        }}
+      >
         GLE Prompt Studio - Generator
       </h1>
 
