@@ -1235,8 +1235,12 @@ Target audience: creators and solopreneurs.`,
           flexWrap: "wrap",
         }}
       >
-        <a href="/impressum">Impressum</a>
-        <a href="/datenschutz">Datenschutz</a>
+        <a href="/impressum">
+          {language === "en" ? "Legal notice" : "Impressum"}
+        </a>
+        <a href="/datenschutz">
+          {language === "en" ? "Privacy policy" : "Datenschutz"}
+        </a>
         <a href="/support">Support</a>
       </footer>
     </main>
