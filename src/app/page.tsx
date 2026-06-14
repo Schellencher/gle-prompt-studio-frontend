@@ -788,12 +788,21 @@ Target audience: creators and solopreneurs.`,
           fontSize: 22,
           fontWeight: 900,
           marginBottom: 10,
-          color: "#bbf7d0",
           letterSpacing: "-0.02em",
-          textShadow: "0 0 18px rgba(34, 197, 94, 0.28)",
+          color: "#f9fafb",
         }}
       >
-        GLE Prompt Studio - Generator
+        <span
+          style={{
+            background: "linear-gradient(135deg, #16a34a, #22c55e)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            textShadow: "0 0 18px rgba(34, 197, 94, 0.28)",
+          }}
+        >
+          GLE
+        </span>{" "}
+        Prompt Studio - Generator
       </h1>
 
       {/* ID SECTION */}
