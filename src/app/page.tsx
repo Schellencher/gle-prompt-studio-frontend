@@ -1017,10 +1017,14 @@ Target audience: creators and solopreneurs.`,
               setOutput("");
               setErr(null);
             }}
-            style={inputStyle}
+            style={blueSelectStyle}
           >
-            <option value="de">DE</option>
-            <option value="en">EN</option>
+            <option style={blueOptionStyle} value="de">
+              DE
+            </option>
+            <option style={blueOptionStyle} value="en">
+              EN
+            </option>
           </select>
         </label>
 
@@ -1365,10 +1369,14 @@ const btnPrimary: React.CSSProperties = {
 };
 
 const btnSecondary: React.CSSProperties = {
-  ...btnPrimary,
-  background: "#fff",
-  color: "#111",
-  border: "1px solid #ddd",
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #2d2d34",
+  background: "#16161a",
+  color: "#f1f1f3",
+  fontWeight: 600,
+  cursor: "pointer",
+  boxShadow: "none",
 };
 
 const pill: React.CSSProperties = {
