@@ -1215,8 +1215,8 @@ Target audience: creators and solopreneurs.`,
 
 // REPARATUR FEHLER 1: Bringt pageWrap zurück
 const pageWrap: React.CSSProperties = {
-  maxWidth: 800,
-  margin: "40px auto",
+  width: "min(1120px, calc(100% - 32px))",
+  margin: "32px auto",
   padding: "30px",
   backgroundColor: "#0b0c10",
   color: "#f1f1f3",
