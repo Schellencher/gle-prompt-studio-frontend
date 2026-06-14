@@ -801,8 +801,12 @@ Target audience: creators and solopreneurs.`,
           }}
         >
           {showDevTools
-            ? "Entwickler-Optionen ausblenden"
-            : "Entwickler-Optionen anzeigen"}
+            ? language === "en"
+              ? "Hide developer options"
+              : "Entwickler-Optionen ausblenden"
+            : language === "en"
+              ? "Show developer options"
+              : "Entwickler-Optionen anzeigen"}
         </button>
       </div>
 
@@ -1013,7 +1017,9 @@ Target audience: creators and solopreneurs.`,
           marginTop: 12,
         }}
       >
-        <div style={labelSmall}>Feinsteuerung</div>
+        <div style={labelSmall}>
+          {language === "en" ? "Fine tuning" : "Feinsteuerung"}
+        </div>
         <button
           type="button"
           onClick={() => setShowPromptDetails(!showPromptDetails)}
@@ -1027,14 +1033,22 @@ Target audience: creators and solopreneurs.`,
           }}
         >
           {showPromptDetails
-            ? "Detail-Regeln ausblenden"
-            : "Detail-Regeln anzeigen"}
+            ? language === "en"
+              ? "Hide detail rules"
+              : "Detail-Regeln ausblenden"
+            : language === "en"
+              ? "Show detail rules"
+              : "Detail-Regeln anzeigen"}
         </button>
       </div>
 
       {showPromptDetails && (
         <label>
-          <div style={labelSmall}>Details & gewünschtes Format</div>
+          <div style={labelSmall}>
+            {language === "en"
+              ? "Details & desired format"
+              : "Details & gewünschtes Format"}
+          </div>
           <textarea
             value={context}
             onChange={(e) => setContext(e.target.value)}
@@ -1059,7 +1073,9 @@ Target audience: creators and solopreneurs.`,
       >
         {showPromptDetails
           ? activeUseCaseHelp
-          : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
+          : language === "en"
+            ? "Optional: show detail rules and example if needed."
+            : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
       </div>
 
       <div
