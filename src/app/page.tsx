@@ -837,28 +837,50 @@ Qualitätsregeln:
 
     if (selectedUseCase === "Social Media Post") {
       return isEn
-        ? `Topic: [Your topic]
+        ? `Topic/offer:
+${goal || "[Your topic or offer]"}
+
 Platform: [Instagram / LinkedIn / TikTok]
-Target audience: [Your target audience]
+Target audience: [e.g. creators, solo entrepreneurs, small business owners]
 Main message: [What should people remember?]
 Desired CTA: [e.g. comment, save, click, join]
 
 Required output structure:
-1) Hook
+1) Strong hook
 2) Short main text
-3) 4 clear bullet points
-4) CTA`
-        : `Thema: [Dein Thema]
+3) 4 clear benefit bullets
+4) CTA
+
+Quality rules:
+- The post must be specific to the topic/offer above.
+- Do not write generic motivational text.
+- Every bullet must describe a concrete benefit.
+- Do not mix CTA and benefits.
+- Keep it clear, direct and useful.
+- No emojis unless explicitly requested.
+- No meta talk.`
+        : `Thema/Angebot:
+${goal || "[Dein Thema oder Angebot]"}
+
 Plattform: [Instagram / LinkedIn / TikTok]
-Zielgruppe: [Deine Zielgruppe]
+Zielgruppe: [z.B. Creator, Solo-Selbstständige, kleine Unternehmen]
 Kernaussage: [Was soll hängen bleiben?]
 Gewünschte CTA: [z.B. kommentieren, speichern, klicken, anmelden]
 
 Gewünschte Ausgabe-Struktur:
-1) Hook
+1) Starker Hook
 2) kurzer Haupttext
-3) 4 klare Bulletpoints
-4) CTA`;
+3) 4 klare Nutzen-Bulletpoints
+4) CTA
+
+Qualitätsregeln:
+- Der Post muss konkret zum oben genannten Thema/Angebot passen.
+- Kein allgemeiner Motivationsspruch.
+- Jeder Bulletpoint muss einen konkreten Nutzen beschreiben.
+- Keine vermischten CTA- und Vorteilssätze.
+- Schreibe klar, direkt und nützlich.
+- Keine Emojis, außer ausdrücklich gewünscht.
+- Kein Meta-Gerede.`;
     }
 
     if (selectedUseCase === "LinkedIn Post") {
