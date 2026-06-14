@@ -778,6 +778,213 @@ Target audience: creators and solopreneurs.`,
     }
   }
 
+
+  // AUTOPILOT_STRUCTURE_MATRIX_HELPER
+  const getAutopilotTemplate = (
+    selectedUseCase: string,
+    selectedLanguage: "de" | "en",
+  ) => {
+    const isEn = selectedLanguage === "en";
+
+    if (selectedUseCase === "Landingpage / Ad-Copy") {
+      return isEn
+        ? `Offer/product: [Your product name]
+Target audience: [e.g. creators, coaches, SaaS founders]
+Main benefit: [e.g. saves 5 hours per week]
+Price/note: [e.g. free beta access / 19.99€/month later]
+Desired CTA: [e.g. join the waitlist]
+
+Required output structure:
+1) Headline (max. 9 words)
+2) Subheadline (1 sentence)
+3) 5 short benefit bullets
+4) CTA line
+5) Mini FAQ: 3 questions + answers`
+        : `Angebot/Produkt: [Dein Produktname]
+Zielgruppe: [z.B. Creator, Coaches, SaaS-Gründer]
+Wichtigster Nutzen: [z.B. spart 5 Stunden pro Woche]
+Preis/Hinweis: [z.B. kostenlose Beta / später 19,99€/Monat]
+Gewünschte CTA: [z.B. Zur Warteliste]
+
+Gewünschte Ausgabe-Struktur:
+1) Headline (max. 9 Wörter)
+2) Subheadline (1 Satz)
+3) 5 kurze Nutzen-Bullets
+4) CTA-Zeile
+5) Mini-FAQ: 3 Fragen + Antworten`;
+    }
+
+    if (selectedUseCase === "Social Media Post") {
+      return isEn
+        ? `Topic: [Your topic]
+Platform: [Instagram / LinkedIn / TikTok]
+Target audience: [Your target audience]
+Main message: [What should people remember?]
+Desired CTA: [e.g. comment, save, click, join]
+
+Required output structure:
+1) Hook
+2) Short main text
+3) 4 clear bullet points
+4) CTA`
+        : `Thema: [Dein Thema]
+Plattform: [Instagram / LinkedIn / TikTok]
+Zielgruppe: [Deine Zielgruppe]
+Kernaussage: [Was soll hängen bleiben?]
+Gewünschte CTA: [z.B. kommentieren, speichern, klicken, anmelden]
+
+Gewünschte Ausgabe-Struktur:
+1) Hook
+2) kurzer Haupttext
+3) 4 klare Bulletpoints
+4) CTA`;
+    }
+
+    if (selectedUseCase === "LinkedIn Post") {
+      return isEn
+        ? `Topic: [Your topic]
+Target audience: [Your audience]
+Point of view: [Your opinion or angle]
+Practical value: [What should the reader learn?]
+Desired CTA: [Question or soft CTA]
+
+Required output structure:
+1) Strong opening sentence
+2) Short main text
+3) 3 clear bullet points
+4) Closing thought
+5) CTA`
+        : `Thema: [Dein Thema]
+Zielgruppe: [Deine Zielgruppe]
+Standpunkt: [Deine Meinung oder Perspektive]
+Praktischer Nutzen: [Was soll der Leser mitnehmen?]
+Gewünschte CTA: [Frage oder weiche CTA]
+
+Gewünschte Ausgabe-Struktur:
+1) Starker Einstiegssatz
+2) kurzer Haupttext
+3) 3 klare Bulletpoints
+4) abschließender Gedanke
+5) CTA`;
+    }
+
+    if (selectedUseCase === "E-Mail") {
+      return isEn
+        ? `Recipient/target audience: [Who receives this email?]
+Goal: [Sell, inform, invite, reactivate]
+Offer/product: [Your offer]
+Main benefit: [Why should they care?]
+Desired CTA: [What should they do?]
+
+Required output structure:
+1) Subject
+2) Opening sentence
+3) Short main text
+4) 3 benefits
+5) CTA
+6) Closing sentence`
+        : `Empfänger/Zielgruppe: [Wer bekommt diese E-Mail?]
+Ziel: [Verkaufen, informieren, einladen, reaktivieren]
+Angebot/Produkt: [Dein Angebot]
+Wichtigster Nutzen: [Warum ist es relevant?]
+Gewünschte CTA: [Was sollen sie tun?]
+
+Gewünschte Ausgabe-Struktur:
+1) Betreff
+2) Einstiegssatz
+3) kurzer Haupttext
+4) 3 Vorteile
+5) CTA
+6) Abschlusssatz`;
+    }
+
+    if (selectedUseCase === "Blogartikel") {
+      return isEn
+        ? `Topic: [Blog topic]
+Target audience: [Who should read it?]
+Search intent: [What does the reader want to know?]
+Main points: [3-5 points]
+Desired CTA: [Next step]
+
+Required output structure:
+1) SEO title
+2) Intro
+3) Clear outline with H2/H3 headings
+4) Key points per section
+5) Conclusion + CTA`
+        : `Thema: [Blog-Thema]
+Zielgruppe: [Wer soll es lesen?]
+Suchintention: [Was will der Leser wissen?]
+Hauptpunkte: [3-5 Punkte]
+Gewünschte CTA: [Nächster Schritt]
+
+Gewünschte Ausgabe-Struktur:
+1) SEO-Titel
+2) Einleitung
+3) klare Gliederung mit H2/H3
+4) Kernpunkte je Abschnitt
+5) Fazit + CTA`;
+    }
+
+    if (selectedUseCase === "Kurzvideo-Skript") {
+      return isEn
+        ? `Platform: [TikTok / Reel / Shorts]
+Topic: [Your topic]
+Target audience: [Who should watch it?]
+Hook idea: [First 2 seconds]
+Length: [15 / 30 / 45 seconds]
+Desired CTA: [Follow, comment, click]
+
+Required output structure:
+1) Hook
+2) Scene-by-scene script
+3) On-screen text
+4) Spoken text
+5) CTA`
+        : `Plattform: [TikTok / Reel / Shorts]
+Thema: [Dein Thema]
+Zielgruppe: [Wer soll es sehen?]
+Hook-Idee: [erste 2 Sekunden]
+Länge: [15 / 30 / 45 Sekunden]
+Gewünschte CTA: [Folgen, kommentieren, klicken]
+
+Gewünschte Ausgabe-Struktur:
+1) Hook
+2) Szene-für-Szene-Skript
+3) Texteinblendungen
+4) Sprechertext
+5) CTA`;
+    }
+
+    return isEn
+      ? `Product name: [Your product name]
+Target audience: [Who is it for?]
+Main benefit: [Main result or improvement]
+Key features: [3-5 features]
+Price/offer: [Price, beta, discount or note]
+Desired CTA: [Buy, test, join, contact]
+
+Required output structure:
+1) Product name
+2) Short description
+3) 5 benefits
+4) Best suited for
+5) CTA`
+      : `Produktname: [Dein Produktname]
+Zielgruppe: [Für wen ist es?]
+Wichtigster Nutzen: [Hauptergebnis oder Verbesserung]
+Wichtige Eigenschaften: [3-5 Merkmale]
+Preis/Angebot: [Preis, Beta, Rabatt oder Hinweis]
+Gewünschte CTA: [Kaufen, testen, anmelden, Kontakt]
+
+Gewünschte Ausgabe-Struktur:
+1) Produktname
+2) Kurzbeschreibung
+3) 5 Vorteile
+4) Für wen geeignet
+5) CTA`;
+  };
+
   const limit =
     me?.plan === "PRO" ? me?.limits?.PRO_LIMIT : me?.limits?.FREE_LIMIT;
 
@@ -1077,11 +1284,11 @@ Target audience: creators and solopreneurs.`,
         >
           {showPromptDetails
             ? language === "en"
-              ? "Hide detail rules"
-              : "Detail-Regeln ausblenden"
+              ? "Hide structure matrix"
+              : "Struktur-Matrix ausblenden"
             : language === "en"
-              ? "Show detail rules"
-              : "Detail-Regeln anzeigen"}
+              ? "Show structure matrix"
+              : "Struktur-Matrix anzeigen"}
         </button>
       </div>
 
@@ -1089,8 +1296,35 @@ Target audience: creators and solopreneurs.`,
         <label>
           <div style={labelSmall}>
             {language === "en"
-              ? "Details & desired format"
-              : "Details & gewünschtes Format"}
+              ? "⚡ Structure Matrix (PRO Autopilot)"
+              : "⚡ Struktur-Matrix (PRO Autopilot)"}
+          </div>
+          {/* AUTOPILOT_STRUCTURE_MATRIX_BUTTON */}
+          <div style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setContext(getAutopilotTemplate(useCase, language));
+              }}
+              style={{
+                background: "rgba(34, 197, 94, 0.15)",
+                border: "1px solid rgba(34, 197, 94, 0.65)",
+                color: "#bbf7d0",
+                padding: "6px 10px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                boxShadow: "0 8px 18px rgba(34, 197, 94, 0.14)",
+              }}
+            >
+              {language === "en"
+                ? "✨ Load PRO structure"
+                : "✨ PRO-Struktur laden"}
+            </button>
           </div>
           <textarea
             value={context}
@@ -1117,8 +1351,8 @@ Target audience: creators and solopreneurs.`,
         {showPromptDetails
           ? activeUseCaseHelp
           : language === "en"
-            ? "Optional: show detail rules and example if needed."
-            : "Optional: Detail-Regeln und Beispiel bei Bedarf anzeigen."}
+            ? "Optional: open the structure matrix and load a guided template."
+            : "Optional: Struktur-Matrix öffnen und geführte Vorlage laden."}
       </div>
 
       <div
