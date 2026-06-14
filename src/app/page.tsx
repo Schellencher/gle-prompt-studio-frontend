@@ -778,7 +778,6 @@ Target audience: creators and solopreneurs.`,
     }
   }
 
-
   // AUTOPILOT_STRUCTURE_MATRIX_HELPER
   const getAutopilotTemplate = (
     selectedUseCase: string,
@@ -798,8 +797,19 @@ Required output structure:
 1) Headline (max. 9 words)
 2) Subheadline (1 sentence)
 3) 5 short benefit bullets
-4) CTA line
-5) Mini FAQ: 3 questions + answers`
+4) CTA line (1 sentence)
+5) Mini FAQ: 3 questions + answers
+
+Quality rules:
+- The 5 bullets must only contain concrete benefits.
+- The CTA may only appear in point 4, never inside the bullet points.
+- Every bullet point must be a clean full sentence.
+- Write clearly in English.
+- No broken sentence fragments.
+- Do not mix CTA sentences with benefit bullets.
+- Do not repeat the same idea across multiple points.
+- No emojis.
+- No meta talk.`
         : `Angebot/Produkt: [Dein Produktname]
 Zielgruppe: [z.B. Creator, Coaches, SaaS-Gründer]
 Wichtigster Nutzen: [z.B. spart 5 Stunden pro Woche]
@@ -810,8 +820,19 @@ Gewünschte Ausgabe-Struktur:
 1) Headline (max. 9 Wörter)
 2) Subheadline (1 Satz)
 3) 5 kurze Nutzen-Bullets
-4) CTA-Zeile
-5) Mini-FAQ: 3 Fragen + Antworten`;
+4) CTA-Zeile (1 Satz)
+5) Mini-FAQ: 3 Fragen + Antworten
+
+Qualitätsregeln:
+- Die 5 Bulletpoints dürfen nur konkrete Vorteile sein.
+- Die CTA darf nur in Punkt 4 stehen, niemals in den Bulletpoints.
+- Jeder Bulletpoint muss ein sauberer vollständiger Satz sein.
+- Formuliere sauber auf Deutsch.
+- Keine kaputten Satzteile.
+- Keine vermischten CTA- und Vorteilssätze.
+- Keine Wiederholung derselben Aussage in mehreren Punkten.
+- Keine Emojis.
+- Kein Meta-Gerede.`;
     }
 
     if (selectedUseCase === "Social Media Post") {
