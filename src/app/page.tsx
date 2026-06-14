@@ -906,7 +906,7 @@ Target audience: creators and solopreneurs.`,
               const preset = getPresetFor(nextUseCase, language);
 
               setUseCase(nextUseCase);
-              setGoal(preset.goal);
+              setGoal("");
               setContext(preset.context);
               setOutput("");
               setErr(null);
@@ -973,7 +973,7 @@ Target audience: creators and solopreneurs.`,
               const nextLanguage = e.target.value as "de" | "en";
               setLanguage(nextLanguage);
               const preset = getPresetFor(useCase, nextLanguage);
-              setGoal(preset.goal);
+              setGoal("");
               setContext(preset.context);
               setOutput("");
               setErr(null);
