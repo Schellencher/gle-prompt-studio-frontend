@@ -895,7 +895,12 @@ Target audience: creators and solopreneurs.`,
             <button
               onClick={onBillingPortal}
               disabled={busy}
-              style={statusRefreshButtonStyle}
+              style={{
+                ...statusRefreshButtonStyle,
+                border: "1px solid rgba(34, 197, 94, 0.55)",
+                background: "rgba(22, 163, 74, 0.16)",
+                color: "#bbf7d0",
+              }}
             >
               {language === "en" ? "Manage subscription" : "Abo verwalten"}
             </button>
@@ -1333,10 +1338,12 @@ const textareaStyle: React.CSSProperties = {
 const btnPrimary: React.CSSProperties = {
   padding: "10px 14px",
   borderRadius: 10,
-  border: "1px solid #111",
-  background: "#111",
-  color: "#fff",
+  border: "1px solid rgba(34, 197, 94, 0.75)",
+  background: "linear-gradient(135deg, #16a34a, #22c55e)",
+  color: "#052e16",
+  fontWeight: 800,
   cursor: "pointer",
+  boxShadow: "0 10px 22px rgba(34, 197, 94, 0.22)",
 };
 
 const btnSecondary: React.CSSProperties = {
