@@ -1411,7 +1411,11 @@ Gewünschte Ausgabe-Struktur:
         }}
       >
         <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
-          {busy ? "Prompt wird erstellt..." : uiText.generate}
+          {busy
+            ? language === "en"
+              ? "Creating prompt..."
+              : "Prompt wird erstellt..."
+            : uiText.generate}
         </button>
 
         <button
@@ -1423,7 +1427,7 @@ Gewünschte Ausgabe-Struktur:
           disabled={!output}
           style={btnSecondary}
         >
-          {copied ? "KOPIERT!" : uiText.copy}
+          {copied ? (language === "en" ? "COPIED!" : "KOPIERT!") : uiText.copy}
         </button>
       </div>
 
@@ -1447,12 +1451,19 @@ Gewünschte Ausgabe-Struktur:
             }}
           >
             {
-              [
-                "Analyse läuft",
-                "Struktur wird gebaut",
-                "Optimierung läuft",
-                "Finalisierung",
-              ][loadingStep]
+              (language === "en"
+                ? [
+                    "Analyzing",
+                    "Building structure",
+                    "Optimizing",
+                    "Finalizing",
+                  ]
+                : [
+                    "Analyse läuft",
+                    "Struktur wird gebaut",
+                    "Optimierung läuft",
+                    "Finalisierung",
+                  ])[loadingStep]
             }
           </div>
 
