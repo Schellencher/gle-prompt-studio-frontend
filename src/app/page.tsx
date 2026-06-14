@@ -855,7 +855,19 @@ Target audience: creators and solopreneurs.`,
           flexWrap: "wrap",
         }}
       >
-        <div style={pill}>
+        <div
+          style={{
+            ...pill,
+            ...(me?.plan === "PRO"
+              ? {
+                  background: "rgba(22, 163, 74, 0.16)",
+                  border: "1px solid rgba(34, 197, 94, 0.55)",
+                  color: "#bbf7d0",
+                  boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.12)",
+                }
+              : {}),
+          }}
+        >
           Plan: <b>{me?.plan ?? "-"}</b> - Used: <b>{me?.usage?.used ?? "-"}</b>{" "}
           / <b>{limit ?? "-"}</b>
           {me?.plan === "PRO" ? (
