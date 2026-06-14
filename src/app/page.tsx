@@ -940,7 +940,7 @@ Target audience: creators and solopreneurs.`,
         </label>
 
         <label>
-          <div style={labelSmall}>Ton</div>
+          <div style={labelSmall}>{language === "en" ? "Tone" : "Ton"}</div>
           <select
             value={tone}
             onChange={(e) => setTone(e.target.value)}
@@ -968,7 +968,9 @@ Target audience: creators and solopreneurs.`,
         </label>
 
         <label>
-          <div style={labelSmall}>Sprache</div>
+          <div style={labelSmall}>
+            {language === "en" ? "Language" : "Sprache"}
+          </div>
           <select
             value={language}
             onChange={(e) => {
@@ -998,7 +1000,9 @@ Target audience: creators and solopreneurs.`,
       </div>
 
       <label>
-        <div style={labelSmall}>Thema / Angebot</div>
+        <div style={labelSmall}>
+          {language === "en" ? "Topic / offer" : "Thema / Angebot"}
+        </div>
         <textarea
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
