@@ -1203,6 +1203,22 @@ Target audience: creators and solopreneurs.`,
           <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
+      <footer
+        style={{
+          marginTop: 28,
+          paddingTop: 16,
+          borderTop: "1px solid rgba(255,255,255,0.12)",
+          fontSize: 12,
+          opacity: 0.8,
+          display: "flex",
+          gap: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        <a href="/impressum">Impressum</a>
+        <a href="/datenschutz">Datenschutz</a>
+        <a href="/support">Support</a>
+      </footer>
     </main>
   );
 }
@@ -1356,4 +1372,3 @@ const outputPreStyle: React.CSSProperties = {
   lineHeight: 1.55,
   color: "#f9fafb",
 };
-
