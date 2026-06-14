@@ -1243,7 +1243,7 @@ const grid3: React.CSSProperties = {
 // REPARATUR FEHLER 3 & 4: Nur noch EINE Zuweisung für gridConfig
 const gridConfig: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: 12,
   marginBottom: 12,
 };
