@@ -557,7 +557,7 @@ Target audience: creators and solopreneurs.`,
         };
 
   useEffect(() => {
-    setGoal(languagePresets[language].goal);
+    setGoal("");
     setContext(languagePresets[language].context);
   }, [language]);
 
