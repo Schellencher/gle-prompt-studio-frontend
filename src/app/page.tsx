@@ -20,6 +20,42 @@ type Me = {
   stripe: { mode: string; hasCustomerId: boolean; status: string };
 };
 
+type PromptHistoryItem = {
+  id: string;
+  createdAt: string;
+  useCase: string;
+  tone: string;
+  topic: string;
+  language: string;
+  output: string;
+};
+
+const PROMPT_HISTORY_KEY = "gle_prompt_history_v1";
+
+function loadPromptHistory(): PromptHistoryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(PROMPT_HISTORY_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePromptHistory(items: PromptHistoryItem[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(PROMPT_HISTORY_KEY, JSON.stringify(items));
+  } catch {
+    // ignore localStorage errors
+  }
+}
+
 type GenOk = {
   output: string;
   mode: string;
@@ -107,6 +143,7 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
+  const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<AnyErr | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
@@ -549,11 +586,23 @@ Target audience: creators and solopreneurs.`,
           generate: "Create prompt",
           copy: "Copy output",
           result: "Result",
+          historyTitle: "Prompt Library",
+          historyHint:
+            "Your latest generated prompts are saved locally in this browser.",
+          historyOpen: "Open",
+          historyClear: "Clear",
+          historyEmptyTopic: "No topic",
         }
       : {
           generate: "Prompt erstellen",
           copy: "Ausgabe kopieren",
           result: "Ergebnis",
+          historyTitle: "Prompt Library",
+          historyHint:
+            "Deine letzten erstellten Prompts werden lokal in diesem Browser gespeichert.",
+          historyOpen: "Öffnen",
+          historyClear: "Leeren",
+          historyEmptyTopic: "Ohne Thema",
         };
 
   useEffect(() => {
@@ -568,7 +617,6 @@ Target audience: creators and solopreneurs.`,
       const u = localStorage.getItem(LS_USER);
       const k = localStorage.getItem(LS_APIKEY);
 
-      // Falls noch nix da ist: initial befüllen
       if (!a) localStorage.setItem(LS_ACCOUNT, `acc_${safeUUID()}`);
       if (!u) localStorage.setItem(LS_USER, `u_${safeUUID()}`);
 
@@ -578,6 +626,11 @@ Target audience: creators and solopreneurs.`,
     } catch {
       // ignore
     }
+  }, []);
+
+  // Init: Prompt Library aus localStorage laden
+  useEffect(() => {
+    setPromptHistory(loadPromptHistory());
   }, []);
 
   useEffect(() => {
@@ -669,8 +722,19 @@ Target audience: creators and solopreneurs.`,
       const res = await apiPost<GenOk>("/api/generate", body, headers);
 
       if (res.ok) {
-        setOutput(res.output || "");
+        const newOutput = res.output || "";
+
+        setOutput(newOutput);
         setEngineLabel(String(res.model || "").trim());
+
+        addPromptToHistory({
+          useCase,
+          tone,
+          topic: goal,
+          language,
+          output: newOutput,
+        });
+
         await refreshMe();
       } else {
         setErr(res as AnyErr);
@@ -768,6 +832,46 @@ Target audience: creators and solopreneurs.`,
     setUserId(newUser);
     setMe(null);
     setOutput("");
+  }
+
+  function addPromptToHistory(item: {
+    useCase: string;
+    tone: string;
+    topic: string;
+    language: string;
+    output: string;
+  }) {
+    const cleanedOutput = String(item.output || "").trim();
+    if (!cleanedOutput) return;
+
+    const isProUser = String(me?.plan || "").toUpperCase() === "PRO";
+    const maxItems = isProUser ? 20 : 3;
+
+    const entry: PromptHistoryItem = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      createdAt: new Date().toISOString(),
+      useCase: item.useCase || "",
+      tone: item.tone || "",
+      topic: item.topic || "",
+      language: item.language || "de",
+      output: cleanedOutput,
+    };
+
+    const next = [entry, ...promptHistory].slice(0, maxItems);
+
+    setPromptHistory(next);
+    savePromptHistory(next);
+  }
+
+  function openPromptFromHistory(item: PromptHistoryItem) {
+    setOutput(item.output || "");
+    setCopied(false);
+    setErr(null);
+  }
+
+  function clearPromptHistory() {
+    setPromptHistory([]);
+    savePromptHistory([]);
   }
 
   async function copyOutput() {
@@ -1569,6 +1673,59 @@ Gewünschte Ausgabe-Struktur:
           <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
+
+      {promptHistory.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">
+                {uiText.historyTitle}
+              </h2>
+              <p className="mt-1 text-xs text-white/60">{uiText.historyHint}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearPromptHistory}
+              className="rounded-xl border border-white/10 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
+            >
+              {uiText.historyClear}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {promptHistory.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openPromptFromHistory(item)}
+                className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-left hover:bg-white/10"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-white">
+                    {item.useCase || "Prompt"}
+                  </span>
+
+                  <span className="text-xs text-white/50">
+                    {new Date(item.createdAt).toLocaleDateString(
+                      language === "en" ? "en-US" : "de-DE",
+                    )}
+                  </span>
+                </div>
+
+                <div className="mt-1 truncate text-xs text-white/60">
+                  {item.topic || uiText.historyEmptyTopic}
+                </div>
+
+                <div className="mt-2 text-xs text-emerald-300">
+                  {uiText.historyOpen}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <footer
         style={{
           marginTop: 28,
