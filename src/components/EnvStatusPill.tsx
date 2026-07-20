@@ -21,7 +21,7 @@ export default function EnvStatusPill({
 
   // Immer sichtbar (weil genau dafür ist es da)
   const label = maintenanceEnabled ? "MAINTENANCE" : "LIVE";
-  const sub = bypass ? "BYPASS" : "PUBLIC";
+  const sub = bypass ? "BYPASS" : "CLOSED BETA";
 
   return (
     <div

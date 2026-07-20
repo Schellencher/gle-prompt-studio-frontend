@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body>
-        {/* Status immer sichtbar: LIVE/MAINTENANCE + PUBLIC/BYPASS */}
+        {/* Status immer sichtbar: LIVE/MAINTENANCE + CLOSED BETA/BYPASS */}
         <EnvStatusPill maintenanceEnabled={maintenanceEnabled} />
 
         {/* Banner nur wenn Wartung AN + Bypass aktiv */}
