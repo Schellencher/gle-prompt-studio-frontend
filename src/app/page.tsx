@@ -109,33 +109,7 @@ export default function Home() {
   const [useCase, setUseCase] = useState("Landingpage / Ad-Copy");
   const [tone, setTone] = useState("Professionell");
   const [goal, setGoal] = useState("");
-  const [context, setContext] =
-    useState(`Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
-Format exakt so:
-
-1) Headline (max. 9 Wörter)
-2) Subheadline (1 Satz)
-3) 5 Bulletpoints (kurz, knackig)
-4) CTA-Zeile (1 Satz)
-5) Mini-FAQ: 3 Fragen + Antworten (je 1 Satz)
-
-Infos, die rein müssen:
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-- Zielgruppe: Creator & Solopreneure
-- weniger Zeitverlust, schneller Content, konsistentere Qualität
-
-Qualitätsregeln:
-- Die 5 Bulletpoints dürfen nur konkrete Vorteile sein.
-- Die CTA "Zur Warteliste" darf nur in Punkt 4 stehen, niemals in den Bulletpoints.
-- Jeder Bulletpoint muss ein sauberer vollständiger Satz sein.
-- Formuliere sauber auf Deutsch.
-- Schreibe "Tool für die Erstellung von Content", nicht "Tool für Erstellung von Content".
-- Keine kaputten Satzteile.
-- Keine vermischten CTA- und Vorteilssätze.
-- Keine Wiederholung derselben Aussage in mehreren Punkten.
-
-Keine Emojis. Kein Meta-Gerede.`);
+  const [context, setContext] = useState("");
   const [language, setLanguage] = useState<"de" | "en">("de");
   const [boost, setBoost] = useState(false);
 
@@ -150,268 +124,24 @@ Keine Emojis. Kein Meta-Gerede.`);
   const [loadingStep, setLoadingStep] = useState(0);
   const showDevActions = false;
 
-  const languagePresets: Record<
-    "de" | "en",
-    { goal: string; context: string }
-  > = {
-    de: {
-      goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure: Social Posts, Ads & Landingpages in Sekunden (Early Access)",
-      context: `Schreibe eine typische SaaS-Hero-Sektion + Bulletpoints.
-Format exakt so:
-
-1) Headline (max. 9 Wörter)
-2) Subheadline (1 Satz)
-3) 5 Bulletpoints (kurz, knackig)
-4) CTA-Zeile (1 Satz)
-5) Mini-FAQ: 3 Fragen + Antworten (je 1 Satz)
-
-Infos, die rein müssen:
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-- Zielgruppe: Creator & Solopreneure
-- weniger Zeitverlust, schneller Content, konsistentere Qualität
-
-Qualitätsregeln:
-- Die 5 Bulletpoints dürfen nur konkrete Vorteile sein.
-- Die CTA "Zur Warteliste" darf nur in Punkt 4 stehen, niemals in den Bulletpoints.
-- Jeder Bulletpoint muss ein sauberer vollständiger Satz sein.
-- Formuliere sauber auf Deutsch.
-- Schreibe "Tool für die Erstellung von Content", nicht "Tool für Erstellung von Content".
-- Keine kaputten Satzteile.
-- Keine vermischten CTA- und Vorteilssätze.
-- Keine Wiederholung derselben Aussage in mehreren Punkten.
-
-Keine Emojis. Kein Meta-Gerede.`,
-    },
-    en: {
-      goal: "GLE Prompt Studio - AI tool for creators and solopreneurs: social posts, ads and landing pages in seconds (Early Access)",
-      context: `Write a typical SaaS hero section + bullet points.
-Use exactly this format:
-
-1) Headline (max. 9 words)
-2) Subheadline (1 sentence)
-3) 5 bullet points (short and clear)
-4) CTA line (1 sentence)
-5) Mini FAQ: 3 questions + answers (1 sentence each)
-
-Information that must be included:
-- Early Access / waitlist is open
-- Future price: 19.99€/month
-- Target audience: creators and solopreneurs
-- less time wasted, faster content, consistent quality
-
-No emojis. No meta talk.`,
-    },
-  };
-
-  function getPresetFor(nextUseCase: string, nextLanguage: "de" | "en") {
-    if (nextUseCase === "Social Media Post") {
-      return nextLanguage === "en"
-        ? {
-            goal: "GLE Prompt Studio - AI tool for creators and solopreneurs launching Early Access",
-            context: `Create a social media post for Instagram or LinkedIn.
-Use exactly this format:
-
-1) Hook
-2) Short main text
-3) 4 bullet points
-4) CTA
-
-Information that must be included:
-- Early Access / waitlist is open
-- Future price: 19.99€/month
-- Target audience: creators and solopreneurs
-- less time wasted, faster content, consistent quality
-
-No emojis. No meta talk.`,
-          }
-        : {
-            goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
-            context: `Erstelle einen Social-Media-Post für Instagram oder LinkedIn.
-Format exakt so:
-
-1) Hook
-2) kurzer Haupttext
-3) 4 Bulletpoints
-4) CTA
-
-Infos, die rein müssen:
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-- Zielgruppe: Creator & Solopreneure
-- weniger Zeitverlust, schneller Content, konsistente Qualität
-
-Keine Emojis. Kein Meta-Gerede.`,
-          };
-    }
-
-    if (nextUseCase === "LinkedIn Post") {
-      return nextLanguage === "en"
-        ? {
-            goal: "GLE Prompt Studio - AI tool for creators and solopreneurs in Early Access",
-            context: `Create a LinkedIn post.
-Use exactly this format:
-
-1) Strong opening sentence
-2) Short main text
-3) 3 clear bullet points
-4) Closing thought
-5) CTA
-
-Information that must be included:
-- GLE Prompt Studio helps creators and solopreneurs prepare content faster
-- It supports social posts, ads and landing pages
-- Early Access / waitlist is open
-- Future price: 19.99€/month
-
-No emojis. No hashtags. No meta talk.`,
-          }
-        : {
-            goal: "GLE Prompt Studio - KI-Tool für Creator & Solopreneure im Early Access",
-            context: `Erstelle einen LinkedIn-Post.
-Format exakt so:
-
-1) Starker Einstiegssatz
-2) kurzer Haupttext
-3) 3 klare Bulletpoints
-4) abschließender Gedanke
-5) CTA
-
-Infos, die rein müssen:
-- GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
-- Es unterstützt Social Posts, Ads und Landingpages
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-
-Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
-          };
-    }
-    if (nextUseCase === "E-Mail") {
-      return nextLanguage === "en"
-        ? {
-            goal: "GLE Prompt Studio – email for creators and solopreneurs in Early Access",
-            context: `Create a short marketing email.
-Use exactly this format:
-
-1) Subject:
-2) Opening sentence:
-3) Short main text:
-4) Benefits:
-- Benefit 1
-- Benefit 2
-- Benefit 3
-5) CTA:
-6) Closing sentence:
-
-Information that must be included:
-- Early Access / waitlist is open
-- Future price: 19.99€/month
-- Target audience: creators and solopreneurs
-- less time wasted, faster content, consistent quality
-
-Quality rules:
-- This must be an email, not a landing page.
-- Do not write a FAQ.
-- Do not write a headline section.
-- Point 4 must only contain three benefit bullet points.
-- Do not use numbered subpoints under point 4.
-- The CTA may only appear in point 5.
-- Do not write "CTA line" in point 4.
-- Write clean, complete sentences.
-
-No emojis. No meta talk.`,
-          }
-        : {
-            goal: "GLE Prompt Studio – E-Mail für Creator & Solopreneure im Early Access",
-            context: `Erstelle eine kurze Marketing-E-Mail.
-Format exakt so:
-
-1) Betreff:
-2) Einstiegssatz:
-3) Kurzer Haupttext:
-4) Vorteile:
-- Vorteil 1
-- Vorteil 2
-- Vorteil 3
-5) CTA:
-6) Abschlusssatz:
-
-Infos, die rein müssen:
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-- Zielgruppe: Creator & Solopreneure
-- weniger Zeitverlust, schneller Content, konsistentere Qualität
-
-Qualitätsregeln:
-- Das Ergebnis muss eine E-Mail sein, keine Landingpage.
-- Keine FAQ schreiben.
-- Keine Hero-Sektion schreiben.
-- Punkt 4 darf nur drei Vorteil-Bulletpoints enthalten.
-- Unter Punkt 4 keine nummerierten Unterpunkte verwenden.
-- Die CTA darf nur in Punkt 5 stehen.
-- Schreibe nicht "CTA-Zeile" in Punkt 4.
-- Schreibe saubere, vollständige Sätze.
-- Keine kaputten Satzteile.
-
-Keine Emojis. Kein Meta-Gerede.`,
-          };
-    }
-    if (nextUseCase === "Produktbeschreibung") {
-      return nextLanguage === "en"
-        ? {
-            goal: "GLE Prompt Studio - product description for creators and solopreneurs",
-            context: `Create a product description.
-Use exactly this format:
-
-1) Product name
-2) Short description
-3) 5 benefits
-4) Best suited for
-5) CTA
-
-Information that must be included:
-- GLE Prompt Studio helps creators and solopreneurs prepare content faster
-- It supports social posts, ads and landing pages
-- Early Access / waitlist is open
-- Future price: 19.99€/month
-
-No emojis. No hashtags. No meta talk.`,
-          }
-        : {
-            goal: "GLE Prompt Studio - Produktbeschreibung für Creator & Solopreneure",
-            context: `Erstelle eine Produktbeschreibung.
-Format exakt so:
-
-1) Produktname
-2) Kurzbeschreibung
-3) 5 Vorteile
-4) Für wen geeignet
-5) CTA
-
-Infos, die rein müssen:
-- GLE Prompt Studio hilft Creatorn und Solopreneuren, Content schneller vorzubereiten
-- Es unterstützt Social Posts, Ads und Landingpages
-- Early Access / Warteliste offen
-- Preis später 19,99€/Monat
-
-Keine Emojis. Keine Hashtags. Kein Meta-Gerede.`,
-          };
-    }
-    return languagePresets[nextLanguage];
+  function getPresetFor(_nextUseCase: string, _nextLanguage: "de" | "en") {
+    // Form fields must never inject GLE demo data automatically.
+    // Guided structure stays opt-in via the Structure Matrix button below.
+    return { goal: "", context: "" };
   }
   const useCaseHelp: Record<string, string> = {
     "Landingpage / Ad-Copy": `Was du eintragen solltest:
 - Angebot oder Produkt
 - Zielgruppe
 - wichtigster Nutzen
-- Preis oder Early-Access-Hinweis
+- Preis, Verfügbarkeit oder Zugangshinweis
 - gewünschte CTA
 
 Beispiel:
-GLE Prompt Studio ist ein Tool für Creator und Solopreneure.
-Es erstellt strukturierte Entwürfe für Social Posts, Ads und Landingpages.
-Early Access ist geöffnet, Preis später 19,99€/Monat.
-CTA: Zur Warteliste.`,
+Onlinekurs für besseres Zeitmanagement.
+Zielgruppe: Selbstständige und kleine Teams.
+Nutzen: weniger Planungsaufwand und klarere Prioritäten.
+CTA: Mehr erfahren.`,
 
     "Social Media Post": `Was du eintragen solltest:
 - Plattform
@@ -421,9 +151,9 @@ CTA: Zur Warteliste.`,
 - gewünschte Länge oder Stil
 
 Beispiel:
-Instagram-Post für GLE Prompt Studio.
-Zielgruppe: Creator und Solopreneure.
-Aussage: Weniger Zeitverlust bei der Content-Erstellung.
+Instagram-Post über ergonomisches Arbeiten im Homeoffice.
+Zielgruppe: Berufstätige im Homeoffice.
+Aussage: Kleine Anpassungen können den Arbeitsalltag angenehmer machen.
 Ton: direkt und motivierend.`,
 
     "LinkedIn Post": `Was du eintragen solltest:
@@ -446,9 +176,9 @@ Aussage: Gute Prompts sparen Zeit und bringen Struktur.`,
 - Preis oder Angebot
 
 Beispiel:
-Produktbeschreibung für GLE Prompt Studio.
-Zielgruppe: Creator und Solopreneure.
-Vorteile: schneller strukturierte Inhalte, klare Formate, weniger Zeitverlust.`,
+Produktbeschreibung für einen höhenverstellbaren Laptopständer.
+Zielgruppe: Menschen im Homeoffice.
+Vorteile: flexible Arbeitshöhe, kompakte Bauform, schneller Aufbau.`,
 
     "E-Mail": `Was du eintragen solltest:
 - Empfänger/Zielgruppe
@@ -458,9 +188,9 @@ Vorteile: schneller strukturierte Inhalte, klare Formate, weniger Zeitverlust.`,
 - Ton
 
 Beispiel:
-E-Mail an Interessenten der Warteliste.
-Ziel: Early Access erklären.
-CTA: Zur Warteliste anmelden.`,
+E-Mail an Interessenten eines Online-Webinars.
+Ziel: Termin und Nutzen kurz erklären.
+CTA: Platz reservieren.`,
 
     Blogartikel: `Was du eintragen solltest:
 - Thema
@@ -482,9 +212,9 @@ Hauptpunkte: Zeit sparen, bessere Struktur, wiederholbare Prozesse.`,
 - gewünschte Länge
 
 Beispiel:
-TikTok/Reel über GLE Prompt Studio.
-Hook: Du verlierst zu viel Zeit beim Content-Erstellen?
-Zielgruppe: Creator und Solopreneure.`,
+TikTok/Reel über produktiveres Arbeiten im Homeoffice.
+Hook: Verlierst du morgens Zeit, bevor du richtig anfängst?
+Zielgruppe: Berufstätige im Homeoffice.`,
   };
 
   const useCaseHelpEn: Record<string, string> = {
@@ -492,14 +222,14 @@ Zielgruppe: Creator und Solopreneure.`,
 - offer or product
 - target audience
 - main benefit
-- price or Early Access note
+- price, availability or access note
 - desired CTA
 
 Example:
-GLE Prompt Studio is a tool for creators and solopreneurs.
-It creates structured drafts for social posts, ads and landing pages.
-Early Access is open, future price 19.99€/month.
-CTA: Join the waitlist.`,
+Online course for better time management.
+Target audience: freelancers and small teams.
+Benefit: less planning effort and clearer priorities.
+CTA: Learn more.`,
 
     "Social Media Post": `What you should enter:
 - platform
@@ -509,9 +239,9 @@ CTA: Join the waitlist.`,
 - desired length or style
 
 Example:
-Instagram post for GLE Prompt Studio.
-Target audience: creators and solopreneurs.
-Message: Spend less time creating content.
+Instagram post about ergonomic home-office habits.
+Target audience: people working from home.
+Message: Small adjustments can make daily work more comfortable.
 Tone: direct and motivating.`,
 
     "LinkedIn Post": `What you should enter:
@@ -534,9 +264,9 @@ Message: Good prompts save time and create structure.`,
 - price or offer
 
 Example:
-Product description for GLE Prompt Studio.
-Target audience: creators and solopreneurs.
-Benefits: faster structured content, clear formats, less wasted time.`,
+Product description for an adjustable laptop stand.
+Target audience: people working from home.
+Benefits: flexible height, compact design, quick setup.`,
 
     "E-Mail": `What you should enter:
 - recipient or target audience
@@ -546,9 +276,9 @@ Benefits: faster structured content, clear formats, less wasted time.`,
 - tone
 
 Example:
-Email to waitlist subscribers.
-Goal: explain Early Access.
-CTA: Join the waitlist.`,
+Email to people interested in an online webinar.
+Goal: explain the date and key benefit briefly.
+CTA: Reserve a seat.`,
 
     Blogartikel: `What you should enter:
 - topic
@@ -570,9 +300,9 @@ Main points: save time, better structure, repeatable processes.`,
 - desired length
 
 Example:
-TikTok/Reel about GLE Prompt Studio.
-Hook: Are you wasting too much time creating content?
-Target audience: creators and solopreneurs.`,
+TikTok/Reel about working more productively from home.
+Hook: Do you lose time before you really get started?
+Target audience: people working from home.`,
   };
   const activeUseCaseHelp =
     (language === "en" ? useCaseHelpEn : useCaseHelp)[useCase] ||
@@ -607,7 +337,7 @@ Target audience: creators and solopreneurs.`,
 
   useEffect(() => {
     setGoal("");
-    setContext(languagePresets[language].context);
+    setContext("");
   }, [language]);
 
   // Init: IDs + apiKey aus localStorage
@@ -894,8 +624,8 @@ Target audience: creators and solopreneurs.`,
         ? `Offer/product: [Your product name]
 Target audience: [e.g. creators, coaches, SaaS founders]
 Main benefit: [e.g. saves 5 hours per week]
-Price/note: [e.g. free beta access / 19.99€/month later]
-Desired CTA: [e.g. join the waitlist]
+Price/note: [optional: price, availability or access note]
+Desired CTA: [e.g. learn more, request access, buy now]
 
 Required output structure:
 1) Headline (max. 9 words)
@@ -917,8 +647,8 @@ Quality rules:
         : `Angebot/Produkt: [Dein Produktname]
 Zielgruppe: [z.B. Creator, Coaches, SaaS-Gründer]
 Wichtigster Nutzen: [z.B. spart 5 Stunden pro Woche]
-Preis/Hinweis: [z.B. kostenlose Beta / später 19,99€/Monat]
-Gewünschte CTA: [z.B. Zur Warteliste]
+Preis/Hinweis: [optional: Preis, Verfügbarkeit oder Zugangshinweis]
+Gewünschte CTA: [z.B. Mehr erfahren, Zugang anfragen, Jetzt kaufen]
 
 Gewünschte Ausgabe-Struktur:
 1) Headline (max. 9 Wörter)
