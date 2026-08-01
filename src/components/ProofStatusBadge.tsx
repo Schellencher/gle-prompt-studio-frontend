@@ -12,9 +12,26 @@ export type ProofResult = {
   profileId?: string | null;
   profileVersion?: number | null;
   factCount?: number;
+  verifiedFactCount?: number;
   approvedFactIds?: string[];
+  matchedFactIds?: string[];
   factVersions?: Array<{ id?: string; version?: number }>;
   worldTruthVerified?: boolean;
+
+  claimCount?: number;
+  verifiedClaimCount?: number;
+  rejectedClaimCount?: number;
+  rejectedClaims?: Array<{
+    text?: string;
+    reason?: string;
+    matchedFactIds?: string[];
+    unsupportedTokens?: string[];
+    unsupportedNumbers?: string[];
+    unsupportedTechnicalCodes?: string[];
+  }>;
+
+  safeOutputApplied?: boolean;
+  safeOutputVerifiedClaimCount?: number;
 };
 
 type Props = {
@@ -37,14 +54,29 @@ const reasonText: Record<string, { de: string; en: string }> = {
   },
 };
 
+function clampCount(value: unknown) {
+  const n = Number(value || 0);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 export default function ProofStatusBadge({ proof, language }: Props) {
   const isEn = language === "en";
   const status = String(proof?.status || "NOT_VERIFIED").toUpperCase();
   const passed = status === "PASSED";
   const review = status === "REVIEW_REQUIRED" || status === "REVIEW REQUIRED";
   const blocked = status === "BLOCKED";
-  const factCount = Math.max(0, Number(proof?.factCount || 0));
-  const profileVersion = Number(proof?.profileVersion || 0);
+
+  const factCount = clampCount(proof?.factCount);
+  const verifiedFactCount = Math.min(
+    factCount || clampCount(proof?.verifiedFactCount),
+    clampCount(proof?.verifiedFactCount),
+  );
+  const profileVersion = clampCount(proof?.profileVersion);
+
+  const claimCount = clampCount(proof?.claimCount);
+  const verifiedClaimCount = clampCount(proof?.verifiedClaimCount);
+  const rejectedClaimCount = clampCount(proof?.rejectedClaimCount);
+  const safeOutputApplied = proof?.safeOutputApplied === true;
 
   const palette = passed
     ? {
@@ -82,10 +114,74 @@ export default function ProofStatusBadge({ proof, language }: Props) {
         ? "BLOCKED"
         : "NOT VERIFIED";
 
-  const countLabel = passed && factCount > 0 ? `${factCount}/${factCount} Proof Facts` : factCount > 0 ? `${factCount} Proof Facts` : "";
-  const versionLabel = profileVersion > 0 ? `${isEn ? "Profile" : "Profil"} v${profileVersion}` : "";
-  const summary = [statusLabel, countLabel, versionLabel].filter(Boolean).join(" · ");
-  const knownReason = proof?.reason ? reasonText[String(proof.reason)] : undefined;
+  const countLabel =
+    factCount > 0
+      ? `${verifiedFactCount}/${factCount} Proof Facts`
+      : "";
+
+  const versionLabel =
+    profileVersion > 0
+      ? `${isEn ? "Profile" : "Profil"} v${profileVersion}`
+      : "";
+
+  const summary = [statusLabel, countLabel, versionLabel]
+    .filter(Boolean)
+    .join(" · ");
+
+  const knownReason = proof?.reason
+    ? reasonText[String(proof.reason)]
+    : undefined;
+
+  let explanation: string;
+
+  if (passed) {
+    explanation = isEn
+      ? "Checked against the approved facts in the selected profile. This does not verify external world truth."
+      : "Gegen die freigegebenen Fakten im ausgewählten Profil geprüft. Dies bestätigt keine externe Weltwahrheit.";
+  } else if (
+    review &&
+    safeOutputApplied &&
+    proof?.reason === "unsupported_claims_detected"
+  ) {
+    explanation = isEn
+      ? "Unapproved claims were detected in the AI draft. GLE therefore replaced it with a safe version built only from the approved Proof Facts."
+      : "Im KI-Entwurf wurden nicht freigegebene Claims erkannt. GLE hat deshalb eine sichere Version ausschließlich aus den freigegebenen Proof Facts ausgegeben.";
+  } else if (
+    review &&
+    safeOutputApplied &&
+    proof?.reason === "incomplete_fact_coverage"
+  ) {
+    explanation = isEn
+      ? "The AI draft did not cover all approved Proof Facts. GLE therefore replaced it with a safe, complete version built only from the approved Proof Facts."
+      : "Der KI-Entwurf hat nicht alle freigegebenen Proof Facts abgedeckt. GLE hat deshalb eine sichere, vollständige Version ausschließlich aus den freigegebenen Proof Facts ausgegeben.";
+  } else if (review && safeOutputApplied) {
+    explanation = isEn
+      ? "The AI draft required review. GLE replaced it with a safe version built only from the approved Proof Facts."
+      : "Der KI-Entwurf erforderte eine Prüfung. GLE hat ihn durch eine sichere Version ausschließlich aus den freigegebenen Proof Facts ersetzt.";
+  } else if (knownReason) {
+    explanation = isEn ? knownReason.en : knownReason.de;
+  } else if (review) {
+    explanation = isEn
+      ? "GLE detected claims that still require review before the output can be treated as verified."
+      : "GLE hat Claims erkannt, die noch geprüft werden müssen, bevor die Ausgabe als verifiziert gelten kann.";
+  } else if (blocked) {
+    explanation = isEn
+      ? "GLE blocked this output because the proof rules were not satisfied."
+      : "GLE hat diese Ausgabe blockiert, weil die Proof-Regeln nicht erfüllt wurden.";
+  } else {
+    explanation = isEn
+      ? "This output has not been verified by GLE Proof-of-Execution."
+      : "Diese Ausgabe wurde noch nicht durch GLE Proof-of-Execution verifiziert.";
+  }
+
+  const showClaimStats =
+    claimCount > 0 &&
+    (passed || review) &&
+    (verifiedClaimCount > 0 || rejectedClaimCount > 0);
+
+  const claimStats = isEn
+    ? `${claimCount} claims checked · ${verifiedClaimCount} confirmed · ${rejectedClaimCount} rejected`
+    : `${claimCount} Claims geprüft · ${verifiedClaimCount} bestätigt · ${rejectedClaimCount} abgelehnt`;
 
   return (
     <div
@@ -127,23 +223,26 @@ export default function ProofStatusBadge({ proof, language }: Props) {
       <div
         style={{
           marginTop: 5,
-          color: "rgba(226,232,240,0.72)",
+          color: "rgba(226,232,240,0.76)",
           fontSize: 11,
           lineHeight: 1.45,
         }}
       >
-        {passed
-          ? isEn
-            ? "Checked against the approved facts in the selected profile. This does not verify external world truth."
-            : "Gegen die freigegebenen Fakten im ausgewählten Profil geprüft. Dies bestätigt keine externe Weltwahrheit."
-          : knownReason
-            ? isEn
-              ? knownReason.en
-              : knownReason.de
-            : isEn
-              ? "This output has not been verified by GLE Proof-of-Execution."
-              : "Diese Ausgabe wurde noch nicht durch GLE Proof-of-Execution verifiziert."}
+        {explanation}
       </div>
+
+      {showClaimStats ? (
+        <div
+          style={{
+            marginTop: 5,
+            color: "rgba(226,232,240,0.58)",
+            fontSize: 10.5,
+            lineHeight: 1.4,
+          }}
+        >
+          {claimStats}
+        </div>
+      ) : null}
     </div>
   );
 }
