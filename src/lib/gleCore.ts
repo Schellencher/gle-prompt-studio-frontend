@@ -143,6 +143,32 @@ export async function apiPost<T extends object>(
   return handleResponse<T>(res);
 }
 
+export async function apiPut<T extends object>(
+  path: string,
+  body: any,
+  headers: Record<string, string> = {},
+): Promise<ApiResponse<T>> {
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
+    body: JSON.stringify(body ?? {}),
+    cache: "no-store",
+  });
+  return handleResponse<T>(res);
+}
+
+export async function apiDelete<T extends object>(
+  path: string,
+  headers: Record<string, string> = {},
+): Promise<ApiResponse<T>> {
+  const res = await fetch(apiUrl(path), {
+    method: "DELETE",
+    headers,
+    cache: "no-store",
+  });
+  return handleResponse<T>(res);
+}
+
 /**
  * 5) MAPPING (UI -> Backend)
  */
@@ -153,6 +179,7 @@ export type GenerateBody = {
   extra: string;
   outLang: "DE" | "EN";
   boost: boolean;
+  profileId?: string;
 };
 
 export function mapGenerateBody(ui: any): GenerateBody {
@@ -163,6 +190,8 @@ export function mapGenerateBody(ui: any): GenerateBody {
     .trim()
     .toUpperCase();
 
+  const profileId = String(ui?.profileId || "").trim();
+
   return {
     useCase: String(ui?.useCase || "").trim() || "Allgemein",
     tone: String(ui?.tone || "").trim() || "Professionell",
@@ -171,5 +200,6 @@ export function mapGenerateBody(ui: any): GenerateBody {
     outLang:
       lang === "EN" || lang === "ENGLISH" || lang === "ENG" ? "EN" : "DE",
     boost: !!ui?.boost,
+    ...(profileId ? { profileId } : {}),
   };
 }

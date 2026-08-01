@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import MagicContextPanel from "@/components/MagicContextPanel";
 import {
   apiGet,
   apiPost,
@@ -83,6 +84,7 @@ type AnyErr = {
 const LS_ACCOUNT = "gle_account_id";
 const LS_USER = "gle_user_id";
 const LS_APIKEY = "gle_api_key_v1";
+const LS_PROFILE = "gle_magic_context_profile_v1";
 
 function safeUUID() {
   try {
@@ -112,6 +114,7 @@ export default function Home() {
   const [context, setContext] = useState("");
   const [language, setLanguage] = useState<"de" | "en">("de");
   const [boost, setBoost] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
 
   // App-State
   const [me, setMe] = useState<Me | null>(null);
@@ -346,6 +349,7 @@ Target audience: people working from home.`,
       const a = localStorage.getItem(LS_ACCOUNT);
       const u = localStorage.getItem(LS_USER);
       const k = localStorage.getItem(LS_APIKEY);
+      const p = localStorage.getItem(LS_PROFILE);
 
       if (!a) localStorage.setItem(LS_ACCOUNT, `acc_${safeUUID()}`);
       if (!u) localStorage.setItem(LS_USER, `u_${safeUUID()}`);
@@ -353,6 +357,7 @@ Target audience: people working from home.`,
       setAccountId((a || localStorage.getItem(LS_ACCOUNT) || "").trim());
       setUserId((u || localStorage.getItem(LS_USER) || "").trim());
       setApiKey((k || "").trim());
+      setSelectedProfileId((p || "").trim());
     } catch {
       // ignore
     }
@@ -386,6 +391,15 @@ Target audience: people working from home.`,
       // ignore
     }
   }, [accountId, userId, apiKey]);
+
+  useEffect(() => {
+    try {
+      if (selectedProfileId) localStorage.setItem(LS_PROFILE, selectedProfileId);
+      else localStorage.removeItem(LS_PROFILE);
+    } catch {
+      // ignore
+    }
+  }, [selectedProfileId]);
 
   const [engineLabel, setEngineLabel] = useState("");
 
@@ -447,6 +461,7 @@ Target audience: people working from home.`,
         context,
         language,
         boost,
+        profileId: selectedProfileId,
       });
 
       const res = await apiPost<GenOk>("/api/generate", body, headers);
@@ -1019,6 +1034,14 @@ Gewünschte Ausgabe-Struktur:
           </button>
         )}
       </div>
+
+      <MagicContextPanel
+        headers={headers}
+        language={language}
+        selectedProfileId={selectedProfileId}
+        onSelectProfile={setSelectedProfileId}
+        disabled={busy}
+      />
 
       {/* CONFIG */}
       <div style={gridConfig}>
