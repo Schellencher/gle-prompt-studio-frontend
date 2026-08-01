@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import MagicContextPanel from "@/components/MagicContextPanel";
+import ProofStatusBadge, { type ProofResult } from "@/components/ProofStatusBadge";
 import {
   apiGet,
   apiPost,
@@ -68,6 +69,7 @@ type GenOk = {
   boostLimit: number;
   renewAt: number;
   cancelAt: number;
+  proof?: ProofResult;
 };
 
 type AnyErr = {
@@ -120,6 +122,7 @@ export default function Home() {
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
+  const [proof, setProof] = useState<ProofResult | null>(null);
   const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<AnyErr | null>(null);
@@ -436,6 +439,7 @@ Target audience: people working from home.`,
 
     if (!String(goal || "").trim()) {
       setOutput("");
+      setProof(null);
       setCopied(false);
       setErr({
         ok: false,
@@ -451,6 +455,7 @@ Target audience: people working from home.`,
     setBusy(true);
     setErr(null);
     setOutput("");
+    setProof(null);
     setCopied(false);
 
     try {
@@ -470,6 +475,7 @@ Target audience: people working from home.`,
         const newOutput = res.output || "";
 
         setOutput(newOutput);
+        setProof(res.proof || null);
         setEngineLabel(String(res.model || "").trim());
 
         addPromptToHistory({
@@ -482,6 +488,7 @@ Target audience: people working from home.`,
 
         await refreshMe();
       } else {
+        setProof(null);
         setErr(res as AnyErr);
       }
     } catch (e: any) {
@@ -577,6 +584,7 @@ Target audience: people working from home.`,
     setUserId(newUser);
     setMe(null);
     setOutput("");
+    setProof(null);
   }
 
   function addPromptToHistory(item: {
@@ -610,6 +618,7 @@ Target audience: people working from home.`,
 
   function openPromptFromHistory(item: PromptHistoryItem) {
     setOutput(item.output || "");
+    setProof(null);
     setCopied(false);
     setErr(null);
   }
@@ -1039,7 +1048,10 @@ Gewünschte Ausgabe-Struktur:
         headers={headers}
         language={language}
         selectedProfileId={selectedProfileId}
-        onSelectProfile={setSelectedProfileId}
+        onSelectProfile={(profileId) => {
+          setSelectedProfileId(profileId);
+          setProof(null);
+        }}
         disabled={busy}
       />
 
@@ -1057,6 +1069,7 @@ Gewünschte Ausgabe-Struktur:
               setGoal("");
               setContext(preset.context);
               setOutput("");
+              setProof(null);
               setErr(null);
             }}
             style={blueSelectStyle}
@@ -1141,6 +1154,7 @@ Gewünschte Ausgabe-Struktur:
               setGoal("");
               setContext(preset.context);
               setOutput("");
+              setProof(null);
               setErr(null);
             }}
             style={blueSelectStyle}
@@ -1423,6 +1437,7 @@ Gewünschte Ausgabe-Struktur:
             <span>{uiText.result}</span>
             <span style={{ fontSize: 11, opacity: 0.65 }}>Fertig</span>
           </div>
+          {proof ? <ProofStatusBadge proof={proof} language={language} /> : null}
           <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
