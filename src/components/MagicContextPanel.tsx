@@ -161,9 +161,9 @@ export default function MagicContextPanel({
     setError("");
     try {
       const res = await apiGet<ProfileListResponse>("/api/profiles", headers);
-      if (!res.ok) {
+      if (res.ok === false) {
         setProfiles([]);
-        setError(res.message || t.loadError);
+        setError(("message" in res && typeof res.message === "string" && res.message) || t.loadError);
         return;
       }
 
@@ -266,8 +266,8 @@ export default function MagicContextPanel({
         ? await apiPut<ProfileWriteResponse>(`/api/profiles/${draft.id}`, payload, headers)
         : await apiPost<ProfileWriteResponse>("/api/profiles", payload, headers);
 
-      if (!res.ok) {
-        setError(res.message || t.saveError);
+      if (res.ok === false) {
+        setError(("message" in res && typeof res.message === "string" && res.message) || t.saveError);
         return;
       }
 
@@ -292,8 +292,8 @@ export default function MagicContextPanel({
         `/api/profiles/${draft.id}`,
         headers,
       );
-      if (!res.ok) {
-        setError(res.message || t.deleteError);
+      if (res.ok === false) {
+        setError(("message" in res && typeof res.message === "string" && res.message) || t.deleteError);
         return;
       }
 
