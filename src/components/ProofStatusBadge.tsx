@@ -32,6 +32,8 @@ export type ProofResult = {
 
   safeOutputApplied?: boolean;
   safeOutputVerifiedClaimCount?: number;
+  humanReviewRequired?: boolean;
+  finalOutputVerified?: boolean;
 };
 
 type Props = {
@@ -63,6 +65,7 @@ export default function ProofStatusBadge({ proof, language }: Props) {
   const isEn = language === "en";
   const status = String(proof?.status || "NOT_VERIFIED").toUpperCase();
   const passed = status === "PASSED";
+  const safeRewrite = status === "SAFE_REWRITE" || status === "SAFE REWRITE";
   const review = status === "REVIEW_REQUIRED" || status === "REVIEW REQUIRED";
   const blocked = status === "BLOCKED";
 
@@ -85,13 +88,20 @@ export default function ProofStatusBadge({ proof, language }: Props) {
         text: "#bbf7d0",
         dot: "#22c55e",
       }
-    : review
+    : safeRewrite
       ? {
-          border: "rgba(245,158,11,0.62)",
-          bg: "rgba(245,158,11,0.12)",
-          text: "#fde68a",
-          dot: "#f59e0b",
+          border: "rgba(249,115,22,0.62)",
+          bg: "rgba(249,115,22,0.12)",
+          text: "#fed7aa",
+          dot: "#f97316",
         }
+      : review
+        ? {
+            border: "rgba(245,158,11,0.62)",
+            bg: "rgba(245,158,11,0.12)",
+            text: "#fde68a",
+            dot: "#f59e0b",
+          }
       : blocked
         ? {
             border: "rgba(239,68,68,0.62)",
@@ -108,8 +118,10 @@ export default function ProofStatusBadge({ proof, language }: Props) {
 
   const statusLabel = passed
     ? "PASSED"
-    : review
-      ? "REVIEW REQUIRED"
+    : safeRewrite
+      ? "SAFE REWRITE"
+      : review
+        ? "REVIEW REQUIRED"
       : blocked
         ? "BLOCKED"
         : "NOT VERIFIED";
@@ -139,7 +151,7 @@ export default function ProofStatusBadge({ proof, language }: Props) {
       ? "Checked against the approved facts in the selected profile. This does not verify external world truth."
       : "Gegen die freigegebenen Fakten im ausgewählten Profil geprüft. Dies bestätigt keine externe Weltwahrheit.";
   } else if (
-    review &&
+    safeRewrite &&
     safeOutputApplied &&
     proof?.reason === "unsupported_claims_detected"
   ) {
@@ -147,14 +159,14 @@ export default function ProofStatusBadge({ proof, language }: Props) {
       ? "Unapproved claims were detected in the AI draft. GLE therefore replaced it with a safe version built only from the approved Proof Facts."
       : "Im KI-Entwurf wurden nicht freigegebene Claims erkannt. GLE hat deshalb eine sichere Version ausschließlich aus den freigegebenen Proof Facts ausgegeben.";
   } else if (
-    review &&
+    safeRewrite &&
     safeOutputApplied &&
     proof?.reason === "incomplete_fact_coverage"
   ) {
     explanation = isEn
       ? "The AI draft did not cover all approved Proof Facts. GLE therefore replaced it with a safe, complete version built only from the approved Proof Facts."
       : "Der KI-Entwurf hat nicht alle freigegebenen Proof Facts abgedeckt. GLE hat deshalb eine sichere, vollständige Version ausschließlich aus den freigegebenen Proof Facts ausgegeben.";
-  } else if (review && safeOutputApplied) {
+  } else if (safeRewrite && safeOutputApplied) {
     explanation = isEn
       ? "The AI draft required review. GLE replaced it with a safe version built only from the approved Proof Facts."
       : "Der KI-Entwurf erforderte eine Prüfung. GLE hat ihn durch eine sichere Version ausschließlich aus den freigegebenen Proof Facts ersetzt.";
@@ -176,12 +188,16 @@ export default function ProofStatusBadge({ proof, language }: Props) {
 
   const showClaimStats =
     claimCount > 0 &&
-    (passed || review) &&
+    (passed || safeRewrite || review) &&
     (verifiedClaimCount > 0 || rejectedClaimCount > 0);
 
-  const claimStats = isEn
-    ? `${claimCount} claims checked · ${verifiedClaimCount} confirmed · ${rejectedClaimCount} rejected`
-    : `${claimCount} Claims geprüft · ${verifiedClaimCount} bestätigt · ${rejectedClaimCount} abgelehnt`;
+  const claimStats = safeRewrite
+    ? isEn
+      ? `AI draft: ${claimCount} claims checked · ${verifiedClaimCount} confirmed · ${rejectedClaimCount} rejected`
+      : `KI-Entwurf: ${claimCount} Claims geprüft · ${verifiedClaimCount} bestätigt · ${rejectedClaimCount} abgelehnt`
+    : isEn
+      ? `${claimCount} claims checked · ${verifiedClaimCount} confirmed · ${rejectedClaimCount} rejected`
+      : `${claimCount} Claims geprüft · ${verifiedClaimCount} bestätigt · ${rejectedClaimCount} abgelehnt`;
 
   return (
     <div
