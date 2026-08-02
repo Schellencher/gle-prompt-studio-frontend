@@ -77,10 +77,21 @@ type TransformOk = GenOk & {
     version?: string;
     actionType?: string;
     targetTone?: string | null;
+    changed?: boolean;
+    actionApplied?: boolean;
+    noOpReason?: string | null;
+    safeVariantApplied?: boolean;
   };
 };
 
 type QuickActionType = "shorten" | "structure" | "cta" | "headline" | "tone";
+
+type QuickActionResultMeta = {
+  changed: boolean;
+  actionApplied: boolean;
+  noOpReason?: string | null;
+  safeVariantApplied?: boolean;
+};
 
 type AnyErr = {
   ok?: false;
@@ -135,6 +146,7 @@ export default function Home() {
   const [quickTone, setQuickTone] = useState("Professionell");
   const [previousCanvas, setPreviousCanvas] = useState<{ output: string; proof: ProofResult | null } | null>(null);
   const [lastQuickAction, setLastQuickAction] = useState<QuickActionType | null>(null);
+  const [lastQuickActionMeta, setLastQuickActionMeta] = useState<QuickActionResultMeta | null>(null);
   const [output, setOutput] = useState("");
   const [proof, setProof] = useState<ProofResult | null>(null);
   const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
@@ -474,6 +486,7 @@ Target audience: people working from home.`,
     setCopied(false);
     setPreviousCanvas(null);
     setLastQuickAction(null);
+    setLastQuickActionMeta(null);
 
     try {
       const body = mapGenerateBody({
@@ -534,6 +547,8 @@ Target audience: people working from home.`,
     setQuickActionBusy(actionType);
     setErr(null);
     setCopied(false);
+    setLastQuickAction(null);
+    setLastQuickActionMeta(null);
 
     try {
       const res = await apiPost<TransformOk>(
@@ -564,11 +579,34 @@ Target audience: people working from home.`,
           return;
         }
 
+        const apiChanged = res.transform?.changed;
+        const changed =
+          typeof apiChanged === "boolean"
+            ? apiChanged
+            : nextOutput.replace(/\r\n/g, "\n") !== currentOutput.replace(/\r\n/g, "\n");
+        const actionApplied = res.transform?.actionApplied ?? changed;
+        const meta: QuickActionResultMeta = {
+          changed: changed && actionApplied,
+          actionApplied,
+          noOpReason: res.transform?.noOpReason || null,
+          safeVariantApplied: !!res.transform?.safeVariantApplied,
+        };
+
+        setEngineLabel(String(res.model || "").trim());
+        setLastQuickAction(actionType);
+        setLastQuickActionMeta(meta);
+
+        if (!meta.changed) {
+          // Honest no-op: keep Canvas output, Proof and Undo state exactly as they
+          // were. The server still audited the transform attempt and usage is
+          // refreshed below.
+          await refreshMe();
+          return;
+        }
+
         setPreviousCanvas({ output: currentOutput, proof });
         setOutput(nextOutput);
         setProof(res.proof || null);
-        setEngineLabel(String(res.model || "").trim());
-        setLastQuickAction(actionType);
 
         addPromptToHistory({
           useCase,
@@ -599,8 +637,32 @@ Target audience: people working from home.`,
     setProof(previousCanvas.proof);
     setPreviousCanvas(null);
     setLastQuickAction(null);
+    setLastQuickActionMeta(null);
     setErr(null);
     setCopied(false);
+  }
+
+  function quickActionNoOpText(reason?: string | null) {
+    const de: Record<string, string> = {
+      already_compact: "Text ist bereits kompakt – keine Änderung nötig.",
+      already_structured: "Text ist bereits passend strukturiert – keine Änderung nötig.",
+      cta_already_clear: "CTA ist bereits klar – keine Änderung nötig.",
+      headline_already_clear: "Headline ist bereits klar – keine Änderung nötig.",
+      no_safe_tone_change: "Kein sinnvoller sicherer Tonwechsel nötig.",
+      action_not_safely_applicable: "Keine sichere sinnvolle Änderung gefunden – Canvas bleibt unverändert.",
+      no_visible_change: "Keine sichtbare Änderung nötig.",
+    };
+    const en: Record<string, string> = {
+      already_compact: "The text is already compact — no change needed.",
+      already_structured: "The text is already well structured — no change needed.",
+      cta_already_clear: "The CTA is already clear — no change needed.",
+      headline_already_clear: "The headline is already clear — no change needed.",
+      no_safe_tone_change: "No meaningful safe tone change was needed.",
+      action_not_safely_applicable: "No safe meaningful change was found — the Canvas stays unchanged.",
+      no_visible_change: "No visible change was needed.",
+    };
+    const map = language === "en" ? en : de;
+    return map[String(reason || "")] || map.no_visible_change;
   }
 
   async function onUpgrade() {
@@ -1671,10 +1733,18 @@ Gewünschte Ausgabe-Struktur:
               </button>
             </div>
 
-            {lastQuickAction && !quickActionBusy ? (
-              <div className="gle-quick-action-status">
+            {lastQuickAction && lastQuickActionMeta && !quickActionBusy ? (
+              <div
+                className={`gle-quick-action-status ${
+                  lastQuickActionMeta.changed ? "is-success" : "is-noop"
+                }`}
+              >
                 <span className="gle-quick-action-status-dot" />
-                {language === "en" ? "Quick Action applied · Proof refreshed" : "Quick Action angewendet · Proof neu geprüft"}
+                {lastQuickActionMeta.changed
+                  ? language === "en"
+                    ? "Quick Action applied · Proof refreshed"
+                    : "Quick Action angewendet · Proof neu geprüft"
+                  : quickActionNoOpText(lastQuickActionMeta.noOpReason)}
               </div>
             ) : null}
           </div>

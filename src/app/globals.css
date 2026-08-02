@@ -497,3 +497,16 @@ button {
     width: 100%;
   }
 }
+
+/* Quick Actions v1.1 — honest success / no-op states */
+.gle-quick-action-status.is-success {
+  color: #86efac;
+}
+
+.gle-quick-action-status.is-noop {
+  color: #fbbf24;
+}
+
+.gle-quick-action-status.is-noop .gle-quick-action-status-dot {
+  background: #f59e0b;
+}
