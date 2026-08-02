@@ -914,7 +914,7 @@ Gewünschte Ausgabe-Struktur:
         >
           GLE
         </span>{" "}
-        Prompt Studio - Generator
+        Prompt Studio
       </h1>
 
       {/* ID SECTION */}
@@ -1044,7 +1044,21 @@ Gewünschte Ausgabe-Struktur:
         )}
       </div>
 
-      <MagicContextPanel
+      <div className="gle-workbench">
+        <section className="gle-briefing-pane">
+          <div className="gle-pane-kicker">
+            {language === "en" ? "Briefing" : "Briefing"}
+          </div>
+          <h2 className="gle-pane-title">
+            {language === "en" ? "Input & context" : "Input & Kontext"}
+          </h2>
+          <p className="gle-pane-copy">
+            {language === "en"
+              ? "Define the task, select Magic Context and fine-tune the structure."
+              : "Aufgabe festlegen, Magic Context wählen und die Struktur feinsteuern."}
+          </p>
+
+          <MagicContextPanel
         headers={headers}
         language={language}
         selectedProfileId={selectedProfileId}
@@ -1303,19 +1317,32 @@ Gewünschte Ausgabe-Struktur:
               : "Prompt wird erstellt..."
             : uiText.generate}
         </button>
-
-        <button
-          onClick={() => {
-            copyOutput();
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1400);
-          }}
-          disabled={!output}
-          style={btnSecondary}
-        >
-          {copied ? (language === "en" ? "COPIED!" : "KOPIERT!") : uiText.copy}
-        </button>
       </div>
+        </section>
+
+        <section className="gle-canvas-pane">
+          <div className="gle-canvas-toolbar">
+            <div>
+              <div className="gle-pane-kicker">Canvas</div>
+              <h2 className="gle-pane-title">{uiText.result}</h2>
+              <p className="gle-pane-copy">
+                {language === "en"
+                  ? "Your generated asset and Proof status stay visible here."
+                  : "Dein Ergebnis und der Proof-Status bleiben hier im Blick."}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                copyOutput();
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1400);
+              }}
+              disabled={!output}
+              style={btnSecondary}
+            >
+              {copied ? (language === "en" ? "COPIED!" : "KOPIERT!") : uiText.copy}
+            </button>
+          </div>
 
       {busy && (
         <div
@@ -1431,6 +1458,20 @@ Gewünschte Ausgabe-Struktur:
           )}
         </div>
       )}
+      {!busy && !err && !output && (
+        <div className="gle-canvas-empty">
+          <div className="gle-canvas-empty-mark">GLE</div>
+          <div className="gle-canvas-empty-title">
+            {language === "en" ? "Ready for your next output" : "Bereit für dein nächstes Ergebnis"}
+          </div>
+          <div className="gle-canvas-empty-copy">
+            {language === "en"
+              ? "Complete the briefing on the left and create your prompt. The result will appear here without losing sight of your inputs."
+              : "Fülle links dein Briefing aus und erstelle den Prompt. Das Ergebnis erscheint hier, ohne dass dein Input aus dem Blick verschwindet."}
+          </div>
+        </div>
+      )}
+
       {output && (
         <div style={outputPanelStyle}>
           <div style={outputHeaderStyle}>
@@ -1441,6 +1482,8 @@ Gewünschte Ausgabe-Struktur:
           <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
+        </section>
+      </div>
 
       {promptHistory.length > 0 && (
         <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1524,9 +1567,9 @@ Gewünschte Ausgabe-Struktur:
 
 // REPARATUR FEHLER 1: Bringt pageWrap zurück
 const pageWrap: React.CSSProperties = {
-  width: "min(1120px, calc(100% - 32px))",
-  margin: "32px auto",
-  padding: "30px",
+  width: "min(1480px, calc(100% - 20px))",
+  margin: "20px auto",
+  padding: "clamp(16px, 2.2vw, 30px)",
   backgroundColor: "#0b0c10",
   color: "#f1f1f3",
   borderRadius: "16px",
