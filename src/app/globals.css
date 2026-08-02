@@ -352,3 +352,148 @@ button {
     width: 100%;
   }
 }
+
+/* =========================
+   Quick Actions — Canvas v1
+========================= */
+.gle-quick-actions {
+  margin: 14px 0 16px;
+  padding: 13px;
+  border: 1px solid rgba(87, 199, 232, 0.18);
+  border-radius: 13px;
+  background: rgba(7, 13, 20, 0.5);
+}
+
+.gle-quick-actions-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.gle-quick-actions-kicker {
+  color: #7dd3fc;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.gle-quick-actions-copy {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.gle-quick-actions-row,
+.gle-quick-tone-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gle-quick-tone-row {
+  margin-top: 8px;
+}
+
+.gle-quick-action-btn,
+.gle-quick-action-undo,
+.gle-quick-tone-select {
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+  color: #e5e7eb;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.gle-quick-action-btn,
+.gle-quick-action-undo {
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.gle-quick-action-btn:hover:not(:disabled),
+.gle-quick-action-undo:hover:not(:disabled) {
+  background: rgba(87, 199, 232, 0.1);
+  border-color: rgba(125, 211, 252, 0.34);
+}
+
+.gle-quick-action-btn:active:not(:disabled),
+.gle-quick-action-undo:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.gle-quick-action-btn:disabled,
+.gle-quick-action-undo:disabled,
+.gle-quick-tone-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.gle-quick-action-tone {
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #bbf7d0;
+}
+
+.gle-quick-tone-select {
+  min-width: 142px;
+  padding: 7px 30px 7px 10px;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.gle-quick-action-undo {
+  flex: 0 0 auto;
+  color: #cbd5e1;
+  background: transparent;
+}
+
+.gle-quick-action-status {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #86efac;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.gle-quick-action-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.55);
+}
+
+@media (max-width: 640px) {
+  .gle-quick-actions-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gle-quick-action-undo {
+    width: auto !important;
+    align-self: flex-start;
+  }
+
+  .gle-quick-actions-row .gle-quick-action-btn {
+    flex: 1 1 calc(50% - 8px);
+    width: auto;
+  }
+
+  .gle-quick-tone-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .gle-quick-tone-select,
+  .gle-quick-action-tone {
+    width: 100%;
+  }
+}

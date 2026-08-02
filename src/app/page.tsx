@@ -72,6 +72,16 @@ type GenOk = {
   proof?: ProofResult;
 };
 
+type TransformOk = GenOk & {
+  transform?: {
+    version?: string;
+    actionType?: string;
+    targetTone?: string | null;
+  };
+};
+
+type QuickActionType = "shorten" | "structure" | "cta" | "headline" | "tone";
+
 type AnyErr = {
   ok?: false;
   error?: string;
@@ -121,6 +131,10 @@ export default function Home() {
   // App-State
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quickActionBusy, setQuickActionBusy] = useState<QuickActionType | null>(null);
+  const [quickTone, setQuickTone] = useState("Professionell");
+  const [previousCanvas, setPreviousCanvas] = useState<{ output: string; proof: ProofResult | null } | null>(null);
+  const [lastQuickAction, setLastQuickAction] = useState<QuickActionType | null>(null);
   const [output, setOutput] = useState("");
   const [proof, setProof] = useState<ProofResult | null>(null);
   const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
@@ -435,6 +449,7 @@ Target audience: people working from home.`,
   }, [headers]);
 
   async function onGenerate() {
+    if (quickActionBusy) return;
     const startedAt = Date.now();
 
     if (!String(goal || "").trim()) {
@@ -457,6 +472,8 @@ Target audience: people working from home.`,
     setOutput("");
     setProof(null);
     setCopied(false);
+    setPreviousCanvas(null);
+    setLastQuickAction(null);
 
     try {
       const body = mapGenerateBody({
@@ -510,6 +527,82 @@ Target audience: people working from home.`,
       setBusy(false);
     }
   }
+  async function onQuickAction(actionType: QuickActionType, targetTone?: string) {
+    const currentOutput = String(output || "").trim();
+    if (!currentOutput || busy || quickActionBusy) return;
+
+    setQuickActionBusy(actionType);
+    setErr(null);
+    setCopied(false);
+
+    try {
+      const res = await apiPost<TransformOk>(
+        "/api/transform",
+        {
+          currentOutput,
+          actionType,
+          useCase,
+          tone,
+          targetTone: actionType === "tone" ? String(targetTone || quickTone).trim() : undefined,
+          outLang: language === "en" ? "EN" : "DE",
+          profileId: selectedProfileId || undefined,
+        },
+        headers,
+      );
+
+      if (res.ok) {
+        const nextOutput = String(res.output || "").trim();
+        if (!nextOutput) {
+          setErr({
+            ok: false,
+            error: "empty_transform",
+            message:
+              language === "en"
+                ? "The Quick Action returned an empty result."
+                : "Die Quick Action hat kein Ergebnis geliefert.",
+          });
+          return;
+        }
+
+        setPreviousCanvas({ output: currentOutput, proof });
+        setOutput(nextOutput);
+        setProof(res.proof || null);
+        setEngineLabel(String(res.model || "").trim());
+        setLastQuickAction(actionType);
+
+        addPromptToHistory({
+          useCase,
+          tone: actionType === "tone" ? String(targetTone || quickTone).trim() || tone : tone,
+          topic: goal,
+          language,
+          output: nextOutput,
+        });
+
+        await refreshMe();
+      } else {
+        setErr(res as AnyErr);
+      }
+    } catch (e: any) {
+      setErr({
+        ok: false,
+        error: "quick_action_client_error",
+        message: e?.message || String(e),
+      });
+    } finally {
+      setQuickActionBusy(null);
+    }
+  }
+
+  function undoQuickAction() {
+    if (!previousCanvas || busy || quickActionBusy) return;
+    setOutput(previousCanvas.output);
+    setProof(previousCanvas.proof);
+    setPreviousCanvas(null);
+    setLastQuickAction(null);
+    setErr(null);
+    setCopied(false);
+  }
+
   async function onUpgrade() {
     setBusy(true);
     setErr(null);
@@ -619,6 +712,8 @@ Target audience: people working from home.`,
   function openPromptFromHistory(item: PromptHistoryItem) {
     setOutput(item.output || "");
     setProof(null);
+    setPreviousCanvas(null);
+    setLastQuickAction(null);
     setCopied(false);
     setErr(null);
   }
@@ -1310,7 +1405,7 @@ Gewünschte Ausgabe-Struktur:
           alignItems: "center",
         }}
       >
-        <button onClick={onGenerate} disabled={busy} style={btnPrimary}>
+        <button onClick={onGenerate} disabled={busy || !!quickActionBusy} style={btnPrimary}>
           {busy
             ? language === "en"
               ? "Creating prompt..."
@@ -1479,6 +1574,111 @@ Gewünschte Ausgabe-Struktur:
             <span style={{ fontSize: 11, opacity: 0.65 }}>Fertig</span>
           </div>
           {proof ? <ProofStatusBadge proof={proof} language={language} /> : null}
+
+          <div className="gle-quick-actions">
+            <div className="gle-quick-actions-head">
+              <div>
+                <div className="gle-quick-actions-kicker">Quick Actions</div>
+                <div className="gle-quick-actions-copy">
+                  {language === "en"
+                    ? "Refine the current Canvas output without leaving the workspace."
+                    : "Aktuellen Canvas-Text direkt weiterbearbeiten – ohne den Workspace zu verlassen."}
+                </div>
+              </div>
+
+              {previousCanvas ? (
+                <button
+                  type="button"
+                  className="gle-quick-action-undo"
+                  onClick={undoQuickAction}
+                  disabled={busy || !!quickActionBusy}
+                >
+                  {language === "en" ? "Undo" : "Rückgängig"}
+                </button>
+              ) : null}
+            </div>
+
+            <div className="gle-quick-actions-row">
+              <button
+                type="button"
+                className="gle-quick-action-btn"
+                onClick={() => onQuickAction("shorten")}
+                disabled={busy || !!quickActionBusy}
+              >
+                {quickActionBusy === "shorten"
+                  ? language === "en" ? "Shortening…" : "Kürze…"
+                  : language === "en" ? "Shorten" : "Kürzen"}
+              </button>
+
+              <button
+                type="button"
+                className="gle-quick-action-btn"
+                onClick={() => onQuickAction("structure")}
+                disabled={busy || !!quickActionBusy}
+              >
+                {quickActionBusy === "structure"
+                  ? language === "en" ? "Structuring…" : "Strukturiere…"
+                  : language === "en" ? "Structure" : "Strukturieren"}
+              </button>
+
+              <button
+                type="button"
+                className="gle-quick-action-btn"
+                onClick={() => onQuickAction("cta")}
+                disabled={busy || !!quickActionBusy}
+              >
+                {quickActionBusy === "cta"
+                  ? language === "en" ? "Improving CTA…" : "CTA wird verbessert…"
+                  : "CTA"}
+              </button>
+
+              <button
+                type="button"
+                className="gle-quick-action-btn"
+                onClick={() => onQuickAction("headline")}
+                disabled={busy || !!quickActionBusy}
+              >
+                {quickActionBusy === "headline"
+                  ? language === "en" ? "Improving headline…" : "Headline wird verbessert…"
+                  : "Headline"}
+              </button>
+            </div>
+
+            <div className="gle-quick-tone-row">
+              <select
+                value={quickTone}
+                onChange={(e) => setQuickTone(e.target.value)}
+                className="gle-quick-tone-select"
+                disabled={busy || !!quickActionBusy}
+                aria-label={language === "en" ? "Target tone" : "Zielton"}
+              >
+                <option value="Neutral">Neutral</option>
+                <option value="Professionell">{language === "en" ? "Professional" : "Professionell"}</option>
+                <option value="Locker">{language === "en" ? "Casual" : "Locker"}</option>
+                <option value="Motivierend">{language === "en" ? "Motivating" : "Motivierend"}</option>
+                <option value="Verkaufstark">{language === "en" ? "Sales-focused" : "Verkaufstark"}</option>
+                <option value="Direkt">{language === "en" ? "Direct" : "Direkt"}</option>
+              </select>
+              <button
+                type="button"
+                className="gle-quick-action-btn gle-quick-action-tone"
+                onClick={() => onQuickAction("tone", quickTone)}
+                disabled={busy || !!quickActionBusy}
+              >
+                {quickActionBusy === "tone"
+                  ? language === "en" ? "Changing tone…" : "Ton wird geändert…"
+                  : language === "en" ? "Change tone" : "Ton ändern"}
+              </button>
+            </div>
+
+            {lastQuickAction && !quickActionBusy ? (
+              <div className="gle-quick-action-status">
+                <span className="gle-quick-action-status-dot" />
+                {language === "en" ? "Quick Action applied · Proof refreshed" : "Quick Action angewendet · Proof neu geprüft"}
+              </div>
+            ) : null}
+          </div>
+
           <pre style={outputPreStyle}>{output}</pre>
         </div>
       )}
