@@ -84,6 +84,28 @@ type TransformOk = GenOk & {
   };
 };
 
+type PipelineOutputId = "social" | "linkedin" | "email";
+
+type PipelineOutput = {
+  id: PipelineOutputId;
+  useCase: string;
+  output: string;
+  proof?: ProofResult;
+};
+
+type PipelineOk = {
+  pipelineVersion: string;
+  template: "content_pack";
+  usageCost: number;
+  outputs: PipelineOutput[];
+  mode: string;
+  model: string;
+  plan: "PRO";
+  used: number;
+  limit: number;
+  renewAt: number;
+  cancelAt: number;
+};
 type QuickActionType = "shorten" | "structure" | "cta" | "headline" | "tone";
 
 type QuickActionResultMeta = {
@@ -141,6 +163,10 @@ export default function Home() {
 
   // App-State
   const [me, setMe] = useState<Me | null>(null);
+  const [pipelineBusy, setPipelineBusy] = useState(false);
+  const [pipelineOutputs, setPipelineOutputs] = useState<PipelineOutput[]>([]);
+  const [activePipelineOutputId, setActivePipelineOutputId] =
+    useState<PipelineOutputId>("social");
   const [busy, setBusy] = useState(false);
   const [quickActionBusy, setQuickActionBusy] = useState<QuickActionType | null>(null);
   const [quickTone, setQuickTone] = useState("Professionell");
@@ -484,6 +510,8 @@ Target audience: people working from home.`,
     setOutput("");
     setProof(null);
     setCopied(false);
+    setPipelineOutputs([]);
+    setActivePipelineOutputId("social");
     setPreviousCanvas(null);
     setLastQuickAction(null);
     setLastQuickActionMeta(null);
@@ -538,6 +566,109 @@ Target audience: people working from home.`,
       }
 
       setBusy(false);
+    }
+  }
+  async function onGenerateContentPack() {
+    if (busy || quickActionBusy || pipelineBusy) return;
+
+    if (!String(goal || "").trim()) {
+      setErr({
+        ok: false,
+        error: "missing_topic",
+        message:
+          language === "en"
+            ? "Please enter a topic or offer first."
+            : "Bitte gib zuerst ein Thema oder Angebot ein.",
+      });
+      return;
+    }
+
+    if (me?.plan !== "PRO") {
+      setErr({
+        ok: false,
+        error: "pipeline_requires_pro",
+        message:
+          language === "en"
+            ? "The Content Pack is available in PRO."
+            : "Das Content Pack ist im PRO-Plan verfügbar.",
+      });
+      return;
+    }
+
+    const startedAt = Date.now();
+
+    setPipelineBusy(true);
+    setErr(null);
+    setCopied(false);
+    setPipelineOutputs([]);
+    setPreviousCanvas(null);
+    setLastQuickAction(null);
+    setLastQuickActionMeta(null);
+
+    try {
+      const res = await apiPost<PipelineOk>(
+        "/api/pipeline",
+        {
+          template: "content_pack",
+          topic: String(goal).trim(),
+          tone,
+          outLang: language === "en" ? "EN" : "DE",
+          extra: String(context || "").trim() || undefined,
+          profileId: selectedProfileId || undefined,
+        },
+        headers,
+      );
+
+      if (res.ok) {
+        const outputs = Array.isArray(res.outputs)
+          ? res.outputs.filter((item) => String(item?.output || "").trim())
+          : [];
+
+        if (!outputs.length) {
+          setErr({
+            ok: false,
+            error: "empty_pipeline",
+            message:
+              language === "en"
+                ? "The Content Pack returned no results."
+                : "Das Content Pack hat keine Ergebnisse geliefert.",
+          });
+          return;
+        }
+
+        const firstOutput = outputs[0];
+
+        setPipelineOutputs(outputs);
+        setActivePipelineOutputId(firstOutput.id);
+        setOutput(firstOutput.output);
+        setProof(firstOutput.proof || null);
+        setEngineLabel(String(res.model || "").trim());
+
+        await refreshMe();
+      } else {
+        setPipelineOutputs([]);
+        setProof(null);
+        setErr(res as AnyErr);
+      }
+    } catch (e: any) {
+      setPipelineOutputs([]);
+      setProof(null);
+      setErr({
+        ok: false,
+        error: "client_error",
+        message: e?.message || String(e),
+      });
+    } finally {
+      const elapsed = Date.now() - startedAt;
+      const minVisibleMs = 700;
+
+      if (elapsed < minVisibleMs) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, minVisibleMs - elapsed),
+        );
+      }
+
+      setPipelineBusy(false);
     }
   }
   async function onQuickAction(actionType: QuickActionType, targetTone?: string) {
@@ -1467,12 +1598,42 @@ Gewünschte Ausgabe-Struktur:
           alignItems: "center",
         }}
       >
-        <button onClick={onGenerate} disabled={busy || !!quickActionBusy} style={btnPrimary}>
+        <button
+          onClick={onGenerate}
+          disabled={busy || pipelineBusy || !!quickActionBusy}
+          style={btnPrimary}
+        >
           {busy
             ? language === "en"
               ? "Creating prompt..."
               : "Prompt wird erstellt..."
             : uiText.generate}
+        </button>
+
+        <button
+          type="button"
+          onClick={onGenerateContentPack}
+          disabled={busy || pipelineBusy || !!quickActionBusy}
+          style={{
+            ...btnSecondary,
+            border: "1px solid rgba(168, 85, 247, 0.72)",
+            background: "rgba(126, 34, 206, 0.18)",
+            color: "#e9d5ff",
+            fontWeight: 800,
+          }}
+          title={
+            language === "en"
+              ? "Creates Social, LinkedIn and Email outputs · 3 uses"
+              : "Erstellt Social, LinkedIn und E-Mail · 3 Nutzungen"
+          }
+        >
+          {pipelineBusy
+            ? language === "en"
+              ? "Creating Content Pack..."
+              : "Content Pack wird erstellt..."
+            : language === "en"
+              ? "✨ Content Pack PRO · 3 uses"
+              : "✨ Content Pack PRO · 3 Nutzungen"}
         </button>
       </div>
         </section>
@@ -1635,6 +1796,83 @@ Gewünschte Ausgabe-Struktur:
             <span>{uiText.result}</span>
             <span style={{ fontSize: 11, opacity: 0.65 }}>Fertig</span>
           </div>
+          {pipelineOutputs.length > 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 14,
+                padding: 8,
+                borderRadius: 12,
+                border: "1px solid rgba(168, 85, 247, 0.30)",
+                background: "rgba(126, 34, 206, 0.08)",
+              }}
+            >
+              {pipelineOutputs.map((item) => {
+                const active = item.id === activePipelineOutputId;
+                const label =
+                  item.id === "social"
+                    ? "Social"
+                    : item.id === "linkedin"
+                      ? "LinkedIn"
+                      : language === "en"
+                        ? "Email"
+                        : "E-Mail";
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActivePipelineOutputId(item.id);
+                      setOutput(item.output);
+                      setProof(item.proof || null);
+                      setCopied(false);
+                      setPreviousCanvas(null);
+                      setLastQuickAction(null);
+                      setLastQuickActionMeta(null);
+                    }}
+                    disabled={busy || pipelineBusy || !!quickActionBusy}
+                    style={{
+                      borderRadius: 9,
+                      border: active
+                        ? "1px solid rgba(216, 180, 254, 0.95)"
+                        : "1px solid rgba(255,255,255,0.12)",
+                      background: active
+                        ? "rgba(147, 51, 234, 0.34)"
+                        : "rgba(255,255,255,0.04)",
+                      color: active ? "#f3e8ff" : "#cfd2dc",
+                      padding: "8px 12px",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor:
+                        busy || pipelineBusy || !!quickActionBusy
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+
+              <span
+                style={{
+                  marginLeft: "auto",
+                  alignSelf: "center",
+                  fontSize: 11,
+                  color: "#c4b5fd",
+                  fontWeight: 700,
+                }}
+              >
+                {language === "en"
+                  ? "PRO Content Pack"
+                  : "PRO Content Pack"}
+              </span>
+            </div>
+          ) : null}
+
           {proof ? <ProofStatusBadge proof={proof} language={language} /> : null}
 
           <div className="gle-quick-actions">
