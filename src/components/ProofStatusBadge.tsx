@@ -32,6 +32,9 @@ export type ProofResult = {
 
   safeOutputApplied?: boolean;
   safeOutputVerifiedClaimCount?: number;
+  pipelineSafeOutputApplied?: boolean;
+  pipelineSafeOutputVerifiedClaimCount?: number;
+  pipelineSafeOutputRejectedClaimCount?: number;
   humanReviewRequired?: boolean;
   finalOutputVerified?: boolean;
 };
@@ -80,6 +83,11 @@ export default function ProofStatusBadge({ proof, language }: Props) {
   const verifiedClaimCount = clampCount(proof?.verifiedClaimCount);
   const rejectedClaimCount = clampCount(proof?.rejectedClaimCount);
   const safeOutputApplied = proof?.safeOutputApplied === true;
+  const pipelineSafeOutputApplied =
+    proof?.pipelineSafeOutputApplied === true;
+  const pipelineSafeOutputRejectedClaimCount = clampCount(
+    proof?.pipelineSafeOutputRejectedClaimCount,
+  );
 
   const palette = passed
     ? {
@@ -136,7 +144,19 @@ export default function ProofStatusBadge({ proof, language }: Props) {
       ? `${isEn ? "Profile" : "Profil"} v${profileVersion}`
       : "";
 
-  const summary = [statusLabel, countLabel, versionLabel]
+  const summary = [
+    statusLabel,
+    pipelineSafeOutputApplied
+      ? (isEn ? "Final output verified ✓" : "Endfassung geprüft ✓")
+      : "",
+    pipelineSafeOutputApplied
+      ? `${pipelineSafeOutputRejectedClaimCount} ${
+          isEn ? "rejected claims" : "abgelehnte Claims"
+        }`
+      : "",
+    countLabel,
+    versionLabel,
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -150,6 +170,10 @@ export default function ProofStatusBadge({ proof, language }: Props) {
     explanation = isEn
       ? "Checked against the approved facts in the selected profile. This does not verify external world truth."
       : "Gegen die freigegebenen Fakten im ausgewählten Profil geprüft. Dies bestätigt keine externe Weltwahrheit.";
+  } else if (safeRewrite && pipelineSafeOutputApplied) {
+    explanation = isEn
+      ? "The AI draft contained unsupported claims. GLE rebuilt the final PRO output from the approved Proof Facts and verified that final output again."
+      : "Der KI-Entwurf enthielt nicht freigegebene Claims. GLE hat die PRO-Endfassung aus den freigegebenen Proof Facts neu aufgebaut und diese Endfassung anschließend erneut geprüft.";
   } else if (
     safeRewrite &&
     safeOutputApplied &&
