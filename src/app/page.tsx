@@ -675,6 +675,14 @@ Target audience: people working from home.`,
     const currentOutput = String(output || "").trim();
     if (!currentOutput || busy || quickActionBusy) return;
 
+    const activePipelineItem =
+      pipelineOutputs.find(
+        (item) => item.id === activePipelineOutputId,
+      ) || null;
+
+    const quickActionUseCase =
+      activePipelineItem?.useCase || useCase;
+
     setQuickActionBusy(actionType);
     setErr(null);
     setCopied(false);
@@ -687,7 +695,7 @@ Target audience: people working from home.`,
         {
           currentOutput,
           actionType,
-          useCase,
+          useCase: quickActionUseCase,
           tone,
           targetTone: actionType === "tone" ? String(targetTone || quickTone).trim() : undefined,
           outLang: language === "en" ? "EN" : "DE",
@@ -739,8 +747,22 @@ Target audience: people working from home.`,
         setOutput(nextOutput);
         setProof(res.proof || null);
 
+        if (activePipelineItem) {
+          setPipelineOutputs((items) =>
+            items.map((item) =>
+              item.id === activePipelineOutputId
+                ? {
+                    ...item,
+                    output: nextOutput,
+                    proof: res.proof || undefined,
+                  }
+                : item,
+            ),
+          );
+        }
+
         addPromptToHistory({
-          useCase,
+          useCase: quickActionUseCase,
           tone: actionType === "tone" ? String(targetTone || quickTone).trim() || tone : tone,
           topic: goal,
           language,
@@ -764,8 +786,24 @@ Target audience: people working from home.`,
 
   function undoQuickAction() {
     if (!previousCanvas || busy || quickActionBusy) return;
+
     setOutput(previousCanvas.output);
     setProof(previousCanvas.proof);
+
+    if (pipelineOutputs.length > 0) {
+      setPipelineOutputs((items) =>
+        items.map((item) =>
+          item.id === activePipelineOutputId
+            ? {
+                ...item,
+                output: previousCanvas.output,
+                proof: previousCanvas.proof || undefined,
+              }
+            : item,
+        ),
+      );
+    }
+
     setPreviousCanvas(null);
     setLastQuickAction(null);
     setLastQuickActionMeta(null);
