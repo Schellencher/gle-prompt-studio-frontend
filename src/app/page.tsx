@@ -177,6 +177,7 @@ export default function Home() {
   const [proof, setProof] = useState<ProofResult | null>(null);
   const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [packCopied, setPackCopied] = useState(false);
   const [err, setErr] = useState<AnyErr | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -959,6 +960,38 @@ Target audience: people working from home.`,
       await navigator.clipboard.writeText(output);
     } catch {
       // ignore
+    }
+  }
+
+  async function copyContentPack() {
+    if (!pipelineOutputs.length) return;
+
+    const labels: Record<PipelineOutputId, string> = {
+      social: "SOCIAL MEDIA",
+      linkedin: "LINKEDIN",
+      email: language === "en" ? "EMAIL" : "E-MAIL",
+    };
+
+    const packText = pipelineOutputs
+      .map((item) => {
+        const label = labels[item.id] || item.useCase;
+        return `===== ${label} =====\n\n${String(item.output || "").trim()}`;
+      })
+      .join("\n\n\n");
+
+    try {
+      await navigator.clipboard.writeText(packText);
+      setPackCopied(true);
+      window.setTimeout(() => setPackCopied(false), 1600);
+    } catch {
+      setErr({
+        ok: false,
+        error: "clipboard_failed",
+        message:
+          language === "en"
+            ? "The Content Pack could not be copied."
+            : "Das Content Pack konnte nicht kopiert werden.",
+      });
     }
   }
 
@@ -1895,19 +1928,58 @@ Gewünschte Ausgabe-Struktur:
                 );
               })}
 
-              <span
+              <div
                 style={{
                   marginLeft: "auto",
-                  alignSelf: "center",
-                  fontSize: 11,
-                  color: "#c4b5fd",
-                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {language === "en"
-                  ? "PRO Content Pack"
-                  : "PRO Content Pack"}
-              </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "#c4b5fd",
+                    fontWeight: 700,
+                  }}
+                >
+                  PRO Content Pack
+                </span>
+
+                <button
+                  type="button"
+                  onClick={copyContentPack}
+                  disabled={busy || !!quickActionBusy || pipelineBusy}
+                  title={
+                    language === "en"
+                      ? "Copy all three Content Pack outputs"
+                      : "Alle drei Content-Pack-Texte kopieren"
+                  }
+                  style={{
+                    border: "1px solid rgba(196,181,253,.35)",
+                    background: "rgba(139,92,246,.12)",
+                    color: "#ddd6fe",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor:
+                      busy || !!quickActionBusy || pipelineBusy
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      busy || !!quickActionBusy || pipelineBusy ? 0.6 : 1,
+                  }}
+                >
+                  {packCopied
+                    ? language === "en"
+                      ? "✓ Copied"
+                      : "✓ Kopiert"
+                    : language === "en"
+                      ? "Copy all"
+                      : "Alle kopieren"}
+                </button>
+              </div>
             </div>
           ) : null}
 
