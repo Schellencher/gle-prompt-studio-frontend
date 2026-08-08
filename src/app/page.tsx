@@ -2043,6 +2043,57 @@ Gewünschte Ausgabe-Struktur:
             </div>
           ) : null}
 
+          {pipelineOutputs.length > 0
+            ? (() => {
+                const verifiedCount = pipelineOutputs.filter((item) => {
+                  const status = String(
+                    item.proof?.status || "",
+                  ).toUpperCase();
+
+                  return (
+                    status === "PASSED" ||
+                    item.proof?.finalOutputVerified === true
+                  );
+                }).length;
+                const packVerified = verifiedCount === pipelineOutputs.length;
+
+                const firstProof = pipelineOutputs[0]?.proof;
+                const sameProfileVersion =
+                  !!firstProof?.profileId &&
+                  !!firstProof?.profileVersion &&
+                  pipelineOutputs.every(
+                    (item) =>
+                      item.proof?.profileId === firstProof.profileId &&
+                      item.proof?.profileVersion === firstProof.profileVersion,
+                  );
+
+                return (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: "9px 11px",
+                      borderRadius: 10,
+                      border: packVerified ? "1px solid rgba(34,197,94,0.30)" : "1px solid rgba(148,163,184,0.28)",
+                      background: packVerified ? "rgba(22,163,74,0.08)" : "rgba(148,163,184,0.06)",
+                      color: packVerified ? "#bbf7d0" : "#cbd5e1",
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {packVerified ? "✓" : "•"} {verifiedCount}/{pipelineOutputs.length}{" "}
+                    {language === "en"
+                      ? "final outputs verified"
+                      : "Endfassungen geprüft"}
+                    {sameProfileVersion
+                      ? ` · ${
+                          language === "en" ? "Profile" : "Profil"
+                        } v${firstProof.profileVersion}`
+                      : ""}
+                  </div>
+                );
+              })()
+            : null}
+
           {proof ? <ProofStatusBadge proof={proof} language={language} /> : null}
 
           <div className="gle-quick-actions">
