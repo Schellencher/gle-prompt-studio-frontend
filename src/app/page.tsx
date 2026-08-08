@@ -996,8 +996,12 @@ Target audience: people working from home.`,
   function openPromptFromHistory(item: PromptHistoryItem) {
     setOutput(item.output || "");
     setProof(null);
+    setPipelineOutputs([]);
+    setPipelineEditByOutput({});
+    setActivePipelineOutputId("social");
     setPreviousCanvas(null);
     setLastQuickAction(null);
+    setLastQuickActionMeta(null);
     setCopied(false);
     setErr(null);
   }
