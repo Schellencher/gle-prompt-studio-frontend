@@ -115,6 +115,22 @@ type QuickActionResultMeta = {
   safeVariantApplied?: boolean;
 };
 
+type CanvasSnapshot = {
+  output: string;
+  proof: ProofResult | null;
+};
+
+type PipelineEditState = Partial<
+  Record<
+    PipelineOutputId,
+    {
+      previousCanvas: CanvasSnapshot | null;
+      lastQuickAction: QuickActionType | null;
+      lastQuickActionMeta: QuickActionResultMeta | null;
+    }
+  >
+>;
+
 type AnyErr = {
   ok?: false;
   error?: string;
@@ -170,7 +186,9 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [quickActionBusy, setQuickActionBusy] = useState<QuickActionType | null>(null);
   const [quickTone, setQuickTone] = useState("Professionell");
-  const [previousCanvas, setPreviousCanvas] = useState<{ output: string; proof: ProofResult | null } | null>(null);
+  const [previousCanvas, setPreviousCanvas] = useState<CanvasSnapshot | null>(null);
+  const [pipelineEditByOutput, setPipelineEditByOutput] =
+    useState<PipelineEditState>({});
   const [lastQuickAction, setLastQuickAction] = useState<QuickActionType | null>(null);
   const [lastQuickActionMeta, setLastQuickActionMeta] = useState<QuickActionResultMeta | null>(null);
   const [output, setOutput] = useState("");
@@ -512,6 +530,7 @@ Target audience: people working from home.`,
     setProof(null);
     setCopied(false);
     setPipelineOutputs([]);
+    setPipelineEditByOutput({});
     setActivePipelineOutputId("social");
     setPreviousCanvas(null);
     setLastQuickAction(null);
@@ -602,6 +621,7 @@ Target audience: people working from home.`,
     setErr(null);
     setCopied(false);
     setPipelineOutputs([]);
+    setPipelineEditByOutput({});
     setPreviousCanvas(null);
     setLastQuickAction(null);
     setLastQuickActionMeta(null);
@@ -737,6 +757,18 @@ Target audience: people working from home.`,
         setLastQuickActionMeta(meta);
 
         if (!meta.changed) {
+          if (activePipelineItem) {
+            setPipelineEditByOutput((states) => ({
+              ...states,
+              [activePipelineOutputId]: {
+                previousCanvas:
+                  states[activePipelineOutputId]?.previousCanvas || null,
+                lastQuickAction: actionType,
+                lastQuickActionMeta: meta,
+              },
+            }));
+          }
+
           // Honest no-op: keep Canvas output, Proof and Undo state exactly as they
           // were. The server still audited the transform attempt and usage is
           // refreshed below.
@@ -744,7 +776,12 @@ Target audience: people working from home.`,
           return;
         }
 
-        setPreviousCanvas({ output: currentOutput, proof });
+        const previousSnapshot: CanvasSnapshot = {
+          output: currentOutput,
+          proof,
+        };
+
+        setPreviousCanvas(previousSnapshot);
         setOutput(nextOutput);
         setProof(res.proof || null);
 
@@ -760,6 +797,15 @@ Target audience: people working from home.`,
                 : item,
             ),
           );
+
+          setPipelineEditByOutput((states) => ({
+            ...states,
+            [activePipelineOutputId]: {
+              previousCanvas: previousSnapshot,
+              lastQuickAction: actionType,
+              lastQuickActionMeta: meta,
+            },
+          }));
         }
 
         addPromptToHistory({
@@ -803,6 +849,12 @@ Target audience: people working from home.`,
             : item,
         ),
       );
+
+      setPipelineEditByOutput((states) => {
+        const next = { ...states };
+        delete next[activePipelineOutputId];
+        return next;
+      });
     }
 
     setPreviousCanvas(null);
@@ -1896,13 +1948,17 @@ Gewünschte Ausgabe-Struktur:
                     key={item.id}
                     type="button"
                     onClick={() => {
+                      const editState = pipelineEditByOutput[item.id];
+
                       setActivePipelineOutputId(item.id);
                       setOutput(item.output);
                       setProof(item.proof || null);
                       setCopied(false);
-                      setPreviousCanvas(null);
-                      setLastQuickAction(null);
-                      setLastQuickActionMeta(null);
+                      setPreviousCanvas(editState?.previousCanvas || null);
+                      setLastQuickAction(editState?.lastQuickAction || null);
+                      setLastQuickActionMeta(
+                        editState?.lastQuickActionMeta || null,
+                      );
                     }}
                     disabled={busy || pipelineBusy || !!quickActionBusy}
                     style={{
